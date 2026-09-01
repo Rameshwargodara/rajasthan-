@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@layer base {
+  /* Real KrutiDev and DevLys TrueType fonts loaded from local public/fonts */
+  @font-face {
+    font-family: 'KrutiDev';
+    src: url('/fonts/KrutiDev010.ttf') format('truetype'),
+         local('Kruti Dev 010'), local('KrutiDev 010'), local('KrutiDev');
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+  }
+
+  @font-face {
+    font-family: 'DevLys';
+    src: url('/fonts/DevLys010.ttf') format('truetype'),
+         local('DevLys 010'), local('DevLys');
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+  }
+
+  .font-kruti {
+    font-family: 'KrutiDev', 'DevLys', sans-serif;
+  }
+}
