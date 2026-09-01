@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { MenuBar } from './components/MenuBar';
 import { Toolbar } from './components/Toolbar';
@@ -7,6 +7,13 @@ import { ModuleCard } from './components/ModuleCard';
 import { ExamCard } from './components/ExamCard';
 import { LessonModal } from './components/LessonModal';
 import { HindiTypingLesson } from './components/HindiTypingLesson';
+import {
+  AppTheme,
+  FontDarkness,
+  applyThemeToDOM,
+  getStoredFontDarkness,
+  getStoredTheme,
+} from './lib/displaySettings';
 import {
   AllInOneStamp,
   SscEmblem,
@@ -30,10 +37,28 @@ import { TypingModule, SelectedModuleState } from './types';
 export default function App() {
   const [currentView, setCurrentView] = useState<'home' | 'typing-lesson'>('typing-lesson');
   const [typingLanguage, setTypingLanguage] = useState<'hindi' | 'english'>('hindi');
+  const [theme, setTheme] = useState<AppTheme>(getStoredTheme);
+  const [fontDarkness, setFontDarkness] = useState<FontDarkness>(getStoredFontDarkness);
   const [modalState, setModalState] = useState<SelectedModuleState>({
     isOpen: false,
     module: null,
   });
+
+  useEffect(() => {
+    applyThemeToDOM(theme);
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('soni_typing_theme', nextTheme);
+    applyThemeToDOM(nextTheme);
+  };
+
+  const handleChangeFontDarkness = (darkness: FontDarkness) => {
+    setFontDarkness(darkness);
+    localStorage.setItem('soni_typing_font_darkness', darkness);
+  };
 
   const handleOpenModule = (
     title: string,
@@ -78,6 +103,10 @@ export default function App() {
       <HindiTypingLesson
         initialLanguage={typingLanguage}
         onBackToHome={() => setCurrentView('home')}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        fontDarkness={fontDarkness}
+        onChangeFontDarkness={handleChangeFontDarkness}
       />
     );
   }
@@ -85,7 +114,11 @@ export default function App() {
   return (
     <div
       id="app-root-container"
-      className="min-h-screen bg-[#d6d9df] flex flex-col font-sans select-none text-slate-800"
+      className={`min-h-screen flex flex-col font-sans select-none transition-colors ${
+        theme === 'dark'
+          ? 'dark bg-[#0f172a] text-slate-100'
+          : 'bg-[#d6d9df] text-slate-800'
+      }`}
     >
       {/* Top Windows Chrome Bar */}
       <TitleBar title="Soni Typing Tutor 5.1.168" />
@@ -94,7 +127,12 @@ export default function App() {
       <MenuBar />
 
       {/* Quick Action Toolbar */}
-      <Toolbar />
+      <Toolbar
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        fontDarkness={fontDarkness}
+        onChangeFontDarkness={handleChangeFontDarkness}
+      />
 
       {/* Online Typing Test Banner */}
       <OnlineBanner

@@ -10,8 +10,21 @@ import {
   cleanHindiChar,
   KRUTI_ALT_CODES,
 } from '../lib/krutiMapping';
-import { HINDI_LEARN_KEYS_LESSONS, HindiLesson } from '../data/hindiLessons';
+import {
+  HINDI_LEARN_KEYS_LESSONS,
+  HINDI_PRACTICE_WORDS_LESSONS,
+  HINDI_TYPE_PARAGRAPH_LESSONS,
+  HindiLesson,
+} from '../data/hindiLessons';
 import { ENGLISH_LESSONS, EnglishLesson } from '../data/englishLessons';
+import {
+  AppTheme,
+  FontDarkness,
+  applyThemeToDOM,
+  getFontDarknessStyle,
+  getStoredFontDarkness,
+  getStoredTheme,
+} from '../lib/displaySettings';
 import {
   ArrowLeft,
   ChevronLeft,
@@ -23,14 +36,19 @@ import {
   Type,
   Volume2,
   VolumeX,
-  Languages,
   Zap,
   Target,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 interface HindiTypingLessonProps {
   onBackToHome: () => void;
   initialLanguage?: 'hindi' | 'english';
+  theme?: AppTheme;
+  onToggleTheme?: () => void;
+  fontDarkness?: FontDarkness;
+  onChangeFontDarkness?: (darkness: FontDarkness) => void;
 }
 
 function playKeySound(isError: boolean) {
@@ -67,9 +85,10 @@ function playKeySound(isError: boolean) {
 }
 
 /**
- * Checks if a vowel/matra character is standalone (individual without a base consonant),
- * so it needs extra width/spacing to avoid overlapping on itself.
- * If the vowel is on a letter (e.g. 'ds' = के), this returns false to preserve normal ligature rendering.
+ * Checks if a vowel/matra character is standalone (individual pure matra drill without any base consonant in the word),
+ * so it needs extra width/spacing to avoid overlapping on itself during standalone matra drills.
+ * If the vowel is on ANY consonant/word (e.g. 'ds' = के, 'Qq' = फु, '[kq' = खु, 'dkW' = कॉ),
+ * this returns false to preserve normal font ligatures and keep the vowel attached to the base letter.
  */
 function isIndividualVowel(chars: Array<string | { char: string }>, idx: number): boolean {
   const getChar = (i: number) => {
@@ -79,18 +98,13 @@ function isIndividualVowel(chars: Array<string | { char: string }>, idx: number)
   };
 
   const currentChar = getChar(idx);
-  // Target individual matras like 's' (े), 'S' (ै), 'a' (ं), 'q' (ु), 'w' (ू)
-  if (
-    currentChar !== 's' &&
-    currentChar !== 'S' &&
-    currentChar !== 'q' &&
-    currentChar !== 'w' &&
-    currentChar !== 'a'
-  ) {
+  // Pure combining matra characters in KrutiDev layout
+  const MATRA_CHARS = new Set(['s', 'S', 'q', 'w', 'a', 'W', 'z', 'f', 'h', 'k']);
+  if (!MATRA_CHARS.has(currentChar)) {
     return false;
   }
 
-  // Find boundaries of the current whitespace-delimited word
+  // Find boundaries of the current whitespace-delimited word token
   let start = idx;
   while (start > 0 && getChar(start - 1) !== ' ' && getChar(start - 1) !== '\n') {
     start--;
@@ -100,36 +114,99 @@ function isIndividualVowel(chars: Array<string | { char: string }>, idx: number)
     end++;
   }
 
-  // Base consonants in KrutiDev layout
-  const BASE_CONSONANTS = /[dl;'gjrtvueiopzxcvbnmDLGJRTVEIOPZXCVBNM]/;
+  // If ANY character in this word token is a consonant or non-matra letter (e.g. Q, [, d, g, l, etc.),
+  // then the matra belongs to a base consonant and MUST NOT be isolated.
   for (let i = start; i <= end; i++) {
-    if (BASE_CONSONANTS.test(getChar(i))) {
-      return false; // There is a base consonant in this word -> matra is on a letter
+    const c = getChar(i);
+    if (!MATRA_CHARS.has(c)) {
+      return false; // Found a consonant or other character -> matra is attached to base consonant
     }
   }
 
-  return true; // Standalone individual vowel without any consonant
+  return true; // Standalone pure matra drill where the whole word is only matras (e.g. "ssss" or "qqqq")
 }
 
 export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
   onBackToHome,
   initialLanguage = 'hindi',
+  theme: propTheme,
+  onToggleTheme: propOnToggleTheme,
+  fontDarkness: propFontDarkness,
+  onChangeFontDarkness: propOnChangeFontDarkness,
 }) => {
+  // Theme state
+  const [internalTheme, setInternalTheme] = useState<AppTheme>(getStoredTheme);
+  const currentTheme = propTheme ?? internalTheme;
+
+  useEffect(() => {
+    applyThemeToDOM(currentTheme);
+  }, [currentTheme]);
+
+  const handleToggleTheme = () => {
+    if (propOnToggleTheme) {
+      propOnToggleTheme();
+    } else {
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      setInternalTheme(nextTheme);
+      localStorage.setItem('soni_typing_theme', nextTheme);
+      applyThemeToDOM(nextTheme);
+    }
+  };
+
+  // Font Darkness state
+  const [internalDarkness, setInternalDarkness] = useState<FontDarkness>(getStoredFontDarkness);
+  const currentFontDarkness = propFontDarkness ?? internalDarkness;
+
+  const handleChangeFontDarkness = (darkness: FontDarkness) => {
+    if (propOnChangeFontDarkness) {
+      propOnChangeFontDarkness(darkness);
+    } else {
+      setInternalDarkness(darkness);
+      localStorage.setItem('soni_typing_font_darkness', darkness);
+    }
+  };
+
+  const darknessStyle = useMemo(
+    () => getFontDarknessStyle(currentFontDarkness),
+    [currentFontDarkness]
+  );
+
   // Language mode: Hindi (KrutiDev/DevLys) or English
   const [language, setLanguage] = useState<'hindi' | 'english'>(initialLanguage);
 
   // Current Selected Exercise (1 to 60)
   const [selectedLessonId, setSelectedLessonId] = useState<number>(1);
 
-  // Active lessons pool based on language
-  const lessonsList: Array<HindiLesson | EnglishLesson> =
-    language === 'hindi' ? HINDI_LEARN_KEYS_LESSONS : ENGLISH_LESSONS;
+  // Active step (1: Instructions, 2: Learn Keys, 3: Practice Words, 4: Paragraphs)
+  const [activeStep, setActiveStep] = useState<number>(2);
+
+  // Active lessons pool based on language and step
+  const lessonsList: Array<HindiLesson | EnglishLesson> = useMemo(() => {
+    if (language === 'english') {
+      return ENGLISH_LESSONS;
+    }
+    if (activeStep === 3) {
+      return HINDI_PRACTICE_WORDS_LESSONS;
+    }
+    if (activeStep === 4) {
+      return HINDI_TYPE_PARAGRAPH_LESSONS;
+    }
+    return HINDI_LEARN_KEYS_LESSONS;
+  }, [language, activeStep]);
 
   const currentLesson =
-    lessonsList.find((l) => l.id === selectedLessonId) || lessonsList[0];
+    lessonsList.find((l) => l.id === selectedLessonId) || lessonsList[0] || {
+      id: 1,
+      title: 'Exercise 1',
+      category: 'Lesson',
+      focusKeys: 'Keys',
+      focusHindi: '',
+      description: '',
+      content: '',
+    };
 
   // Target ASCII sequence from active lesson
-  const targetContent = currentLesson.content;
+  const targetContent = currentLesson.content || '';
   const targetChars = useMemo(() => targetContent.split(''), [targetContent]);
 
   const [typedChars, setTypedChars] = useState<
@@ -155,9 +232,27 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
     }, 40);
   };
 
+  // Switch Step Handler
+  const handleStepChange = (newStep: number) => {
+    setActiveStep(newStep);
+    setSelectedLessonId(1);
+    setTypedChars([]);
+    setCurrentIndex(0);
+    setErrorCount(0);
+    setBackspaceCount(0);
+    setStartTime(null);
+    setElapsedSeconds(0);
+    setIsFinished(false);
+    setResultData(null);
+    targetContainerRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    userContainerRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 40);
+  };
+
   // Font settings
   const [selectedFont, setSelectedFont] = useState<'KrutiDev' | 'DevLys'>('KrutiDev');
-  const [isBold, setIsBold] = useState<boolean>(false);
   const [fontSize, setFontSize] = useState<number>(26);
 
   // Settings
@@ -168,9 +263,6 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
   const [playSounds, setPlaySounds] = useState<boolean>(false);
   const [moveOnError, setMoveOnError] = useState<boolean>(true);
   const [showAltModal, setShowAltModal] = useState<boolean>(false);
-
-  // Active step (1: Instructions, 2: Learn Keys, 3: Practice Words, 4: Paragraphs)
-  const [activeStep, setActiveStep] = useState<number>(2);
 
   // Stats
   const [errorCount, setErrorCount] = useState<number>(0);
@@ -212,7 +304,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
     }
   }, [activeStep, selectedLessonId, language]);
 
-  // Auto-scroll target text box: ONLY scroll when active letter reaches the bottom line of the target box
+  // Auto-scroll target text box
   useEffect(() => {
     if (activeSpanRef.current && targetContainerRef.current) {
       const container = targetContainerRef.current;
@@ -223,14 +315,12 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
       const containerHeight = container.clientHeight;
       const visibleBottom = containerScrollTop + containerHeight;
 
-      // Bottom threshold: strictly only scroll once the cursor's bottom edge reaches or passes below the visible bottom of the box
       if (elementBottom > visibleBottom - 2) {
         container.scrollTo({
           top: elementBottom - containerHeight + 6,
           behavior: 'smooth',
         });
       } else if (elementTop < containerScrollTop) {
-        // Backspaced above the current visible top
         container.scrollTo({
           top: Math.max(0, elementTop - 4),
           behavior: 'smooth',
@@ -239,7 +329,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
     }
   }, [currentIndex]);
 
-  // Auto-scroll bottom user box independently: only scroll down when lines fill up
+  // Auto-scroll bottom user box independently
   useEffect(() => {
     if (userContainerRef.current) {
       const userBox = userContainerRef.current;
@@ -340,27 +430,90 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
     });
   };
 
+  // Backspace action handler with robust support for One Word mode and Ctrl+Backspace
+  const handleBackspaceAction = (isWordDelete: boolean) => {
+    if (isFinished || typedChars.length === 0 || currentIndex === 0) return;
+
+    setBackspaceCount((prev) => prev + 1);
+
+    if (backspaceOption === 'deactivate') {
+      if (playSounds) playKeySound(true);
+      return;
+    }
+
+    if (backspaceOption === 'oneWord') {
+      // In one-word backspace mode, once a word is completed and space was typed,
+      // backspace is locked from crossing back into previous words
+      const lastTyped = typedChars[typedChars.length - 1];
+      if (lastTyped && (lastTyped.char === ' ' || lastTyped.char === '\n')) {
+        // Cannot backspace across word boundary
+        if (playSounds) playKeySound(true);
+        return;
+      }
+
+      if (isWordDelete) {
+        // Delete characters of the current active word back to the last space
+        let newLen = typedChars.length;
+        while (
+          newLen > 0 &&
+          typedChars[newLen - 1].char !== ' ' &&
+          typedChars[newLen - 1].char !== '\n'
+        ) {
+          newLen--;
+        }
+        const newTyped = typedChars.slice(0, newLen);
+        setTypedChars(newTyped);
+        setCurrentIndex(newLen);
+        if (playSounds) playKeySound(false);
+      } else {
+        // Delete single character within current word
+        const newTyped = typedChars.slice(0, -1);
+        setTypedChars(newTyped);
+        setCurrentIndex((prev) => Math.max(0, prev - 1));
+        if (playSounds) playKeySound(false);
+      }
+      return;
+    }
+
+    if (backspaceOption === 'full') {
+      if (isWordDelete) {
+        let newLen = typedChars.length;
+        // Trim trailing spaces if any
+        while (
+          newLen > 0 &&
+          (typedChars[newLen - 1].char === ' ' ||
+            typedChars[newLen - 1].char === '\n')
+        ) {
+          newLen--;
+        }
+        // Then trim characters of previous word
+        while (
+          newLen > 0 &&
+          typedChars[newLen - 1].char !== ' ' &&
+          typedChars[newLen - 1].char !== '\n'
+        ) {
+          newLen--;
+        }
+        const newTyped = typedChars.slice(0, newLen);
+        setTypedChars(newTyped);
+        setCurrentIndex(newLen);
+        if (playSounds) playKeySound(false);
+      } else {
+        const newTyped = typedChars.slice(0, -1);
+        setTypedChars(newTyped);
+        setCurrentIndex((prev) => Math.max(0, prev - 1));
+        if (playSounds) playKeySound(false);
+      }
+    }
+  };
+
   // Handle key press
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (showAltModal || isFinished) return;
 
     if (e.key === 'Backspace') {
       e.preventDefault();
-      setBackspaceCount((prev) => prev + 1);
-      if (backspaceOption === 'deactivate') {
-        if (playSounds) playKeySound(true);
-        return;
-      }
-
-      if (backspaceOption === 'full' || backspaceOption === 'oneWord') {
-        if (currentIndex > 0) {
-          const newTyped = [...typedChars];
-          newTyped.pop();
-          setTypedChars(newTyped);
-          setCurrentIndex((prev) => Math.max(0, prev - 1));
-          if (playSounds) playKeySound(false);
-        }
-      }
+      handleBackspaceAction(e.ctrlKey || e.altKey || e.metaKey);
       return;
     }
 
@@ -420,11 +573,18 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
     }
   };
 
+  const handleFocusInput = () => {
+    inputRef.current?.focus();
+  };
+
   return (
     <div
       id="typing-tutor-screen"
-      onClick={handleContainerClick}
-      className="min-h-screen bg-[#c8cbd2] flex flex-col font-sans select-none text-slate-800"
+      className={`min-h-screen flex flex-col font-sans select-none transition-colors ${
+        currentTheme === 'dark'
+          ? 'dark bg-[#0b0f19] text-slate-100'
+          : 'bg-[#f4f6f9] text-slate-800'
+      }`}
     >
       {/* Title Bar */}
       <TitleBar
@@ -436,15 +596,15 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
       {/* Steps Header Nav Bar */}
       <div
         id="typing-steps-nav"
-        className="bg-[#f0f0f0] border-b border-slate-300 px-3 py-1 flex items-center justify-between text-xs"
+        className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 py-1 flex items-center justify-between text-xs transition-colors shadow-2xs"
       >
         <div className="flex items-center gap-1.5 overflow-x-auto">
           <button
-            onClick={() => setActiveStep(1)}
-            className={`px-2.5 py-0.5 rounded text-xs font-medium cursor-pointer transition-colors flex items-center gap-1 ${
+            onClick={() => handleStepChange(1)}
+            className={`px-2.5 py-1 rounded text-xs font-medium cursor-pointer transition-colors flex items-center gap-1 ${
               activeStep === 1
                 ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'
+                : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
@@ -454,11 +614,11 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
           <span className="text-slate-400 font-mono text-[10px] px-0.5">--&gt;</span>
 
           <button
-            onClick={() => setActiveStep(2)}
-            className={`px-2.5 py-0.5 rounded text-xs font-semibold cursor-pointer shadow-xs transition-colors flex items-center gap-1 ${
+            onClick={() => handleStepChange(2)}
+            className={`px-2.5 py-1 rounded text-xs font-semibold cursor-pointer shadow-xs transition-colors flex items-center gap-1 ${
               activeStep === 2
-                ? 'bg-[#6366f1] text-white shadow-indigo-200'
-                : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'
+                ? 'bg-indigo-600 text-white shadow-indigo-200 dark:shadow-none'
+                : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
             }`}
           >
             <KeyboardIcon className="w-3.5 h-3.5" />
@@ -468,25 +628,25 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
           <span className="text-slate-400 font-mono text-[10px] px-0.5">--&gt;</span>
 
           <button
-            onClick={() => setActiveStep(3)}
-            className={`px-2.5 py-0.5 rounded text-xs font-medium cursor-pointer transition-colors flex items-center gap-1 ${
+            onClick={() => handleStepChange(3)}
+            className={`px-2.5 py-1 rounded text-xs font-semibold cursor-pointer shadow-xs transition-colors flex items-center gap-1 ${
               activeStep === 3
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'
+                ? 'bg-indigo-600 text-white shadow-indigo-200 dark:shadow-none'
+                : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
             }`}
           >
             <Type className="w-3.5 h-3.5" />
-            <span>3. Practice Words</span>
+            <span>3. Practice Words ({HINDI_PRACTICE_WORDS_LESSONS.length} Lessons)</span>
           </button>
 
           <span className="text-slate-400 font-mono text-[10px] px-0.5">--&gt;</span>
 
           <button
-            onClick={() => setActiveStep(4)}
-            className={`px-2.5 py-0.5 rounded text-xs font-medium cursor-pointer transition-colors flex items-center gap-1 ${
+            onClick={() => handleStepChange(4)}
+            className={`px-2.5 py-1 rounded text-xs font-semibold cursor-pointer shadow-xs transition-colors flex items-center gap-1 ${
               activeStep === 4
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300'
+                ? 'bg-indigo-600 text-white shadow-indigo-200 dark:shadow-none'
+                : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
@@ -494,29 +654,50 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
           </button>
         </div>
 
-        <button
-          onClick={onBackToHome}
-          className="flex items-center gap-1 px-2.5 py-0.5 bg-white hover:bg-slate-100 border border-slate-300 rounded text-xs font-medium text-slate-700 cursor-pointer shadow-2xs transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Home Menu</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Quick Theme Toggle */}
+          <button
+            onClick={handleToggleTheme}
+            title={currentTheme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded text-xs font-medium text-slate-700 dark:text-amber-300 cursor-pointer shadow-2xs transition-colors"
+          >
+            {currentTheme === 'dark' ? (
+              <>
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Light</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden sm:inline">Dark</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={onBackToHome}
+            className="flex items-center gap-1 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded text-xs font-medium text-slate-700 dark:text-slate-200 cursor-pointer shadow-2xs transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Home Menu</span>
+          </button>
+        </div>
       </div>
 
       {/* STEP 1: READ INSTRUCTIONS SCREEN */}
       {activeStep === 1 && (
         <div className="flex-1 p-3 overflow-y-auto max-w-5xl w-full mx-auto">
-          <div className="bg-white border border-slate-300 rounded-md p-5 shadow-sm">
-            <h2 className="text-base font-bold text-slate-900 mb-2 flex items-center gap-2 border-b pb-2">
-              <BookOpen className="w-5 h-5 text-indigo-600" />
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-5 shadow-sm">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+              <BookOpen className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               {language === 'hindi'
                 ? 'Hindi Typing (KrutiDev 010 / DevLys 010) Guidelines'
                 : 'English Typing Tutor Guidelines & Rules'}
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-700 mt-3">
-              <div className="bg-slate-50 border border-slate-200 rounded p-3">
-                <h3 className="font-bold text-slate-900 mb-1.5 text-sm text-indigo-900">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-700 dark:text-slate-300 mt-3">
+              <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded p-3">
+                <h3 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm text-indigo-900 dark:text-indigo-300">
                   1. Home Row Placement (आधार पंक्ति)
                 </h3>
                 <ul className="list-disc list-inside space-y-1 leading-relaxed">
@@ -527,8 +708,8 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                 </ul>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded p-3">
-                <h3 className="font-bold text-slate-900 mb-1.5 text-sm text-indigo-900">
+              <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded p-3">
+                <h3 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm text-indigo-900 dark:text-indigo-300">
                   2. Speed Measurement Formulas (2 Methods)
                 </h3>
                 <ul className="list-disc list-inside space-y-1 leading-relaxed">
@@ -538,18 +719,18 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
               </div>
 
               {language === 'hindi' && (
-                <div className="bg-slate-50 border border-slate-200 rounded p-3">
-                  <h3 className="font-bold text-slate-900 mb-1.5 text-sm text-indigo-900">
+                <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded p-3">
+                  <h3 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm text-indigo-900 dark:text-indigo-300">
                     3. Key Alt-Codes Reference (ऑल्ट कोड्स)
                   </h3>
                   <div className="grid grid-cols-2 gap-1 font-mono text-[11px]">
                     {KRUTI_ALT_CODES.slice(0, 6).map((ac, idx) => (
                       <div
                         key={idx}
-                        className="bg-white p-1 rounded border border-slate-200 flex justify-between items-center"
+                        className="bg-white dark:bg-slate-900 p-1 rounded border border-slate-200 dark:border-slate-700 flex justify-between items-center"
                       >
-                        <span className="font-bold text-indigo-700">{ac.code}</span>
-                        <span className="font-bold text-slate-900 font-kruti text-sm">
+                        <span className="font-bold text-indigo-700 dark:text-indigo-400">{ac.code}</span>
+                        <span className="font-bold text-slate-900 dark:text-white font-kruti text-sm">
                           {ac.char}
                         </span>
                       </div>
@@ -558,16 +739,16 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                 </div>
               )}
 
-              <div className="bg-slate-50 border border-slate-200 rounded p-3">
-                <h3 className="font-bold text-slate-900 mb-1.5 text-sm text-indigo-900">
+              <div className="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded p-3">
+                <h3 className="font-bold text-slate-900 dark:text-white mb-1.5 text-sm text-indigo-900 dark:text-indigo-300">
                   {language === 'hindi' ? '4. Matras & Ordering' : '3. Posture & Technique'}
                 </h3>
                 <ul className="list-disc list-inside space-y-1 leading-relaxed">
                   {language === 'hindi' ? (
                     <>
-                      <li><strong>Chhoti Ee (ि):</strong> Press <code className="bg-slate-200 px-1 rounded font-mono">f</code> before consonant (e.g. <code className="bg-slate-200 px-1 rounded font-mono">fd</code> = कि).</li>
-                      <li><strong>Badi Ee (ी):</strong> Press consonant then <code className="bg-slate-200 px-1 rounded font-mono">h</code> (e.g. <code className="bg-slate-200 px-1 rounded font-mono">dh</code> = की).</li>
-                      <li><strong>Aa Matra (ा):</strong> Press consonant then <code className="bg-slate-200 px-1 rounded font-mono">k</code> (e.g. <code className="bg-slate-200 px-1 rounded font-mono">dk</code> = का).</li>
+                      <li><strong>Chhoti Ee (ि):</strong> Press <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded font-mono">f</code> before consonant (e.g. <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded font-mono">fd</code> = कि).</li>
+                      <li><strong>Badi Ee (ी):</strong> Press consonant then <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded font-mono">h</code> (e.g. <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded font-mono">dh</code> = की).</li>
+                      <li><strong>Aa Matra (ा):</strong> Press consonant then <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded font-mono">k</code> (e.g. <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded font-mono">dk</code> = का).</li>
                     </>
                   ) : (
                     <>
@@ -592,57 +773,26 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
         </div>
       )}
 
-      {/* STEP 3 & STEP 4: EMPTY SECTIONS (READY FOR USER PROVIDED LESSONS) */}
-      {(activeStep === 3 || activeStep === 4) && (
-        <div className="flex-1 p-6 overflow-y-auto max-w-2xl w-full mx-auto flex flex-col items-center justify-center">
-          <div className="bg-white border border-slate-300 rounded-lg p-8 shadow-sm text-center w-full">
-            <div className="w-14 h-14 bg-indigo-50 border border-indigo-200 rounded-full flex items-center justify-center mx-auto mb-4 text-indigo-600">
-              {activeStep === 3 ? (
-                <Type className="w-7 h-7" />
-              ) : (
-                <FileText className="w-7 h-7" />
-              )}
-            </div>
-            <h2 className="text-lg font-bold text-slate-900 mb-2">
-              {activeStep === 3 ? '3. Practice Words' : '4. Type Paragraphs'}
-            </h2>
-            <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-              This section is currently empty. Custom exercises for{' '}
-              <strong>
-                {activeStep === 3 ? 'Practice Words' : 'Type Paragraphs'}
-              </strong>{' '}
-              will be added here once provided.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button
-                onClick={() => setActiveStep(2)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2 rounded text-xs shadow-md cursor-pointer transition-colors flex items-center justify-center gap-1.5"
-              >
-                <KeyboardIcon className="w-4 h-4" />
-                <span>Go to Learn Keys (60 Lessons)</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 2: MAIN INTERACTIVE TYPING WORKSPACE (60 LESSONS) */}
-      {activeStep === 2 && (
-        <div className="flex-1 p-2 flex gap-2 overflow-hidden max-w-[1700px] w-full mx-auto">
-          {/* Left Side: Select Font & Left Hand */}
-          <div className="w-48 shrink-0 flex flex-col justify-between items-center py-1">
-            {/* Select Font Box (only for Hindi) */}
-            {language === 'hindi' ? (
-              <div className="w-full bg-slate-100 border border-slate-300 rounded p-2 shadow-2xs">
-                <h3 className="text-xs font-bold text-slate-800 mb-1">Select Font</h3>
-                <div className="flex flex-col gap-1 text-xs text-slate-700">
+      {/* STEPS 2, 3, 4: MAIN INTERACTIVE TYPING WORKSPACE */}
+      {(activeStep === 2 || activeStep === 3 || activeStep === 4) && (
+        <div className="flex-1 p-2.5 flex gap-2.5 overflow-hidden max-w-[1700px] w-full mx-auto">
+          {/* Left Side: Select Font, Font Darkness & Left Hand */}
+          <div className="w-48 shrink-0 flex flex-col justify-between items-center py-0.5">
+            {/* Select Font & Darkness Box */}
+            <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-2.5 shadow-xs">
+              <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 mb-1.5">
+                {language === 'hindi' ? 'Select Font' : 'Font Settings'}
+              </h3>
+              
+              {language === 'hindi' && (
+                <div className="flex flex-col gap-1 text-xs text-slate-700 dark:text-slate-300 mb-2">
                   <label className="flex items-center gap-1.5 cursor-pointer">
                     <input
                       type="radio"
                       name="fontType"
                       checked={selectedFont === 'KrutiDev'}
                       onChange={() => setSelectedFont('KrutiDev')}
-                      className="accent-blue-600"
+                      className="accent-indigo-600"
                     />
                     <span className="font-medium text-xs">KrutiDev</span>
                   </label>
@@ -653,44 +803,47 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                       name="fontType"
                       checked={selectedFont === 'DevLys'}
                       onChange={() => setSelectedFont('DevLys')}
-                      className="accent-blue-600"
+                      className="accent-indigo-600"
                     />
                     <span className="font-medium text-xs">DevLys</span>
                   </label>
-
-                  <label className="flex items-center gap-1.5 cursor-pointer pt-1 border-t border-slate-200">
-                    <input
-                      type="checkbox"
-                      checked={isBold}
-                      onChange={(e) => setIsBold(e.target.checked)}
-                      className="accent-blue-600"
-                    />
-                    <span className="font-semibold text-xs">Bold</span>
-                  </label>
                 </div>
-              </div>
-            ) : (
-              <div className="w-full bg-slate-100 border border-slate-300 rounded p-2 shadow-2xs">
-                <h3 className="text-xs font-bold text-slate-800 mb-1">Font Style</h3>
-                <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={isBold}
-                    onChange={(e) => setIsBold(e.target.checked)}
-                    className="accent-blue-600"
-                  />
-                  <span className="font-semibold">Bold Font</span>
+              )}
+
+              {/* Font Darkness Selection */}
+              <div className="pt-1.5 border-t border-slate-200 dark:border-slate-800">
+                <label className="block text-[10.5px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                  Font Darkness:
                 </label>
+                <select
+                  value={currentFontDarkness}
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onChange={(e) =>
+                    handleChangeFontDarkness(e.target.value as FontDarkness)
+                  }
+                  className="w-full bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-xs font-semibold px-2 py-1 rounded border border-slate-300 dark:border-slate-700 cursor-pointer shadow-2xs outline-none"
+                >
+                  <option value="normal">Normal</option>
+                  <option value="medium">Darker (Medium)</option>
+                  <option value="bold">Bold (Dark) ⭐</option>
+                  <option value="extra">Extra Dark (Deep)</option>
+                </select>
               </div>
-            )}
+            </div>
 
             {/* Exercise Focus Keys */}
-            <div className="w-full bg-slate-100 border border-slate-300 rounded p-2 shadow-2xs mt-1 text-[11px] text-slate-700">
-              <div className="font-bold text-indigo-900 mb-0.5">
-                Exercise {selectedLessonId}
+            <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-2.5 shadow-xs mt-1.5 text-[11px] text-slate-700 dark:text-slate-300">
+              <div className="font-bold text-indigo-900 dark:text-indigo-400 mb-0.5">
+                {activeStep === 3
+                  ? 'Practice Words'
+                  : activeStep === 4
+                  ? 'Paragraph'
+                  : 'Learn Keys'}{' '}
+                - Ex {selectedLessonId}
               </div>
-              <div className="bg-white p-1 rounded border border-slate-200 font-mono text-[10.5px] text-slate-800">
-                Keys: <strong className="text-indigo-600">{currentLesson.focusKeys}</strong>
+              <div className="bg-slate-50 dark:bg-slate-800/80 p-1.5 rounded border border-slate-200 dark:border-slate-700 font-mono text-[10.5px] text-slate-800 dark:text-slate-200">
+                Keys: <strong className="text-indigo-600 dark:text-amber-400">{currentLesson.focusKeys}</strong>
               </div>
             </div>
 
@@ -718,17 +871,19 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
               autoFocus
             />
 
-            {/* Purple Container for Target & Input */}
-            <div className="bg-[#9da4eb] p-2 rounded shadow-md border border-indigo-400 flex flex-col gap-1.5">
-              {/* 1. Target Text Box (White) - Expanded height for more lines, tight line spacing */}
+            {/* Container for Target & Input - Clean White in Light Mode, Dark Slate in Dark Mode */}
+            <div
+              className="bg-white dark:bg-slate-900 p-2.5 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col gap-2 transition-colors"
+            >
+              {/* 1. Target Text Box - Pure White Background in Light Mode, Ultra-Compact Sleek Highlighter */}
               <div
                 ref={targetContainerRef}
-                className={`bg-white rounded p-2.5 h-[145px] md:h-[155px] overflow-y-auto border border-slate-300 shadow-inner select-none leading-snug whitespace-pre-wrap break-words ${
-                  isBold ? 'font-bold' : 'font-normal'
-                }`}
+                onClick={handleFocusInput}
+                className="bg-white dark:bg-slate-950 rounded-md p-3 h-[145px] md:h-[155px] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-inner select-none leading-snug whitespace-pre-wrap break-words transition-colors cursor-text"
                 style={{
                   fontFamily: language === 'hindi' ? selectedFont : 'monospace, sans-serif',
                   fontSize: `${fontSize}px`,
+                  ...darknessStyle.cssStyle,
                 }}
               >
                 {targetChars.map((char, idx) => {
@@ -737,23 +892,56 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                   const isWrong = isPassed && typedChars[idx] && !typedChars[idx].isCorrect;
                   const isStandalone = language === 'hindi' && isIndividualVowel(targetChars, idx);
 
+                  // Space Character rendering - sleek, compact
+                  if (char === ' ') {
+                    if (isCurrent) {
+                      return (
+                        <span
+                          key={idx}
+                          ref={activeSpanRef}
+                          className="inline-block w-2 h-[0.8em] align-middle bg-[#fde047] dark:bg-[#eab308] text-black text-[7.5px] leading-none font-bold text-center rounded-[1px] mx-0.5 select-none shadow-2xs"
+                        >
+                          ␣
+                        </span>
+                      );
+                    }
+                    return (
+                      <span
+                        key={idx}
+                        className={
+                          isPassed
+                            ? 'text-slate-400 dark:text-slate-500'
+                            : darknessStyle.className
+                        }
+                      >
+                        {' '}
+                      </span>
+                    );
+                  }
+
+                  // Non-space Characters - Ultra Compact, Small, Sleek Highlighter
                   return (
                     <span
                       key={idx}
                       ref={isCurrent ? activeSpanRef : null}
                       className={`${
                         isStandalone
-                          ? 'inline-block min-w-[0.65em] px-0.5 text-center'
-                          : 'inline'
+                          ? 'inline-block min-w-[0.55em] px-0.5 text-center'
+                          : 'inline px-0'
                       } ${
                         isCurrent
-                          ? 'bg-black text-white px-0.5 rounded-[1px] shadow-xs ring-1 ring-amber-300'
+                          ? 'bg-[#fde047] dark:bg-[#eab308] text-slate-950 font-bold px-0 py-0 rounded-[1px] shadow-2xs'
                           : isWrong
-                          ? 'text-red-600 bg-red-100 font-bold'
+                          ? 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/70 font-bold px-0 rounded-[1px]'
                           : isPassed
-                          ? 'text-slate-400'
-                          : 'text-slate-900'
+                          ? 'text-slate-400 dark:text-slate-500'
+                          : darknessStyle.className
                       }`}
+                      style={
+                        !isCurrent && !isWrong && !isPassed
+                          ? darknessStyle.cssStyle
+                          : undefined
+                      }
                     >
                       {char}
                     </span>
@@ -762,64 +950,98 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
               </div>
 
               {/* 2. Center Controller Strip */}
-              <div className="flex flex-wrap items-center justify-between px-1 text-white text-xs font-semibold select-none gap-1.5">
-                {/* Press Indicator */}
-                <div className="flex items-center gap-1 text-xs bg-indigo-900/30 px-2.5 py-0.5 rounded">
-                  <span>Press :</span>
-                  <span className="font-mono text-amber-300 font-bold text-sm uppercase">
-                    {expectedKey === ' ' ? 'Space' : expectedKey}
-                  </span>
-                  {language === 'hindi' && expectedKey !== ' ' && (
-                    <span
-                      className="text-white/90 text-sm ml-1"
-                      style={{ fontFamily: selectedFont }}
-                    >
-                      ({cleanHindiChar(KEY_TO_HINDI[expectedKey]) || expectedKey})
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="flex flex-wrap items-center justify-between bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 text-xs select-none gap-1.5 transition-colors"
+              >
+                {/* Press Indicator & Step Status */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-2.5 py-0.5 rounded shadow-2xs border border-slate-200 dark:border-slate-700">
+                    <span className="text-slate-600 dark:text-slate-400 font-medium">Press :</span>
+                    <span className="font-mono text-indigo-600 dark:text-amber-300 font-bold text-sm uppercase">
+                      {expectedKey === ' ' ? 'Space' : expectedKey}
                     </span>
-                  )}
+                    {language === 'hindi' && expectedKey !== ' ' && (
+                      <span
+                        className="text-slate-900 dark:text-slate-100 text-sm ml-1"
+                        style={{
+                          fontFamily: selectedFont,
+                          ...darknessStyle.cssStyle,
+                        }}
+                      >
+                        ({cleanHindiChar(KEY_TO_HINDI[expectedKey]) || expectedKey})
+                      </span>
+                    )}
+                  </div>
+                  <div className="hidden sm:flex items-center text-slate-700 dark:text-slate-200 font-bold text-xs bg-white dark:bg-slate-900 px-2 py-0.5 rounded shadow-2xs border border-slate-200 dark:border-slate-700">
+                    <span>
+                      {activeStep === 3
+                        ? 'Practice Words'
+                        : activeStep === 4
+                        ? 'Paragraph'
+                        : 'Learn Keys'}{' '}
+                      Ex : {selectedLessonId}/{lessonsList.length}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Exercise Selection (ONLY EXERCISE NUMBER) & Prev/Next */}
-                <div className="flex items-center gap-1">
+                <div
+                  className="flex items-center gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
                   <button
-                    onClick={() => handleSelectLesson(Math.max(1, selectedLessonId - 1))}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectLesson(Math.max(1, selectedLessonId - 1));
+                    }}
                     disabled={selectedLessonId <= 1}
                     title="Previous Exercise"
-                    className="bg-white hover:bg-slate-100 disabled:opacity-50 text-slate-800 px-1.5 py-0.5 rounded border border-slate-300 text-xs font-bold shadow-2xs cursor-pointer flex items-center"
+                    className="bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 text-slate-800 dark:text-slate-100 px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-600 text-xs font-bold shadow-2xs cursor-pointer flex items-center"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
 
-                  {/* ONLY EXERCISE NUMBER IN DROPDOWN */}
                   <select
-                    className="bg-white text-slate-800 px-2 py-0.5 rounded border border-slate-300 text-xs font-bold shadow-2xs cursor-pointer"
+                    id="select-exercise-number"
+                    className="bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600 text-xs font-bold shadow-2xs cursor-pointer outline-none max-h-60"
                     value={selectedLessonId}
-                    onChange={(e) => handleSelectLesson(Number(e.target.value))}
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleSelectLesson(Number(e.target.value));
+                    }}
                   >
                     {lessonsList.map((lesson) => (
-                      <option key={lesson.id} value={lesson.id}>
+                      <option key={lesson.id} value={lesson.id} className="dark:bg-slate-800">
                         Exercise {lesson.id}
                       </option>
                     ))}
                   </select>
 
                   <button
-                    onClick={() =>
+                    onClick={(e) => {
+                      e.stopPropagation();
                       handleSelectLesson(
                         Math.min(lessonsList.length, selectedLessonId + 1)
-                      )
-                    }
+                      );
+                    }}
                     disabled={selectedLessonId >= lessonsList.length}
                     title="Next Exercise"
-                    className="bg-white hover:bg-slate-100 disabled:opacity-50 text-slate-800 px-1.5 py-0.5 rounded border border-slate-300 text-xs font-bold shadow-2xs cursor-pointer flex items-center"
+                    className="bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 text-slate-800 dark:text-slate-100 px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-600 text-xs font-bold shadow-2xs cursor-pointer flex items-center"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
 
                   <button
-                    onClick={handleRestart}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRestart();
+                    }}
                     title="Restart Exercise"
-                    className="bg-white hover:bg-slate-100 text-slate-800 px-2 py-0.5 rounded border border-slate-300 text-xs font-bold shadow-2xs cursor-pointer flex items-center gap-1 ml-0.5"
+                    className="bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600 text-xs font-bold shadow-2xs cursor-pointer flex items-center gap-1 ml-0.5"
                   >
                     <RotateCcw className="w-3 h-3" />
                     <span>Reset</span>
@@ -827,34 +1049,44 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                 </div>
 
                 {/* Font Size Adjuster */}
-                <div className="flex items-center gap-1">
+                <div
+                  className="flex items-center gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
                   <button
-                    onClick={() => setFontSize((prev) => Math.max(16, prev - 2))}
-                    className="bg-indigo-700 hover:bg-indigo-800 px-1.5 py-0.5 rounded text-white text-xs cursor-pointer font-bold"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFontSize((prev) => Math.max(16, prev - 2));
+                    }}
+                    className="bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-100 text-xs cursor-pointer font-bold border border-slate-300 dark:border-slate-600"
                   >
                     A-
                   </button>
-                  <span className="px-1.5 py-0.5 bg-white text-slate-800 rounded text-xs font-bold min-w-[24px] text-center">
+                  <span className="px-1.5 py-0.5 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded text-xs font-bold min-w-[24px] text-center border border-slate-200 dark:border-slate-700">
                     {fontSize}
                   </span>
                   <button
-                    onClick={() => setFontSize((prev) => Math.min(42, prev + 2))}
-                    className="bg-indigo-700 hover:bg-indigo-800 px-1.5 py-0.5 rounded text-white text-xs cursor-pointer font-bold"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFontSize((prev) => Math.min(42, prev + 2));
+                    }}
+                    className="bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-100 text-xs cursor-pointer font-bold border border-slate-300 dark:border-slate-600"
                   >
                     A+
                   </button>
                 </div>
               </div>
 
-              {/* 3. User Typing Output Box (White) - Expanded height for more lines, tight line spacing */}
+              {/* 3. User Typing Output Box (Pure White in light mode, Dark Slate in dark) */}
               <div
                 ref={userContainerRef}
-                className={`bg-white rounded p-2.5 h-[145px] md:h-[155px] overflow-y-auto border border-slate-300 shadow-inner select-none leading-snug whitespace-pre-wrap break-words ${
-                  isBold ? 'font-bold' : 'font-normal'
-                }`}
+                onClick={handleFocusInput}
+                className="bg-white dark:bg-slate-950 rounded-md p-3 h-[145px] md:h-[155px] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-inner select-none leading-snug whitespace-pre-wrap break-words transition-colors cursor-text"
                 style={{
                   fontFamily: language === 'hindi' ? selectedFont : 'monospace, sans-serif',
                   fontSize: `${fontSize}px`,
+                  ...darknessStyle.cssStyle,
                 }}
               >
                 {typedChars.map((item, idx) => {
@@ -864,13 +1096,14 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                       key={idx}
                       className={`${
                         isStandalone
-                          ? 'inline-block min-w-[0.65em] px-0.5 text-center'
-                          : 'inline'
+                          ? 'inline-block min-w-[0.55em] px-0.5 text-center'
+                          : 'inline px-0'
                       } ${
                         item.isCorrect
-                          ? 'text-slate-800'
-                          : 'text-red-600 font-bold bg-red-100 underline decoration-red-600 px-0.5 rounded-[1px]'
+                          ? 'text-slate-800 dark:text-slate-100'
+                          : 'text-red-600 dark:text-red-400 font-bold bg-red-100 dark:bg-red-950/70 underline decoration-red-600 px-0 rounded-[1px]'
                       }`}
+                      style={item.isCorrect ? darknessStyle.cssStyle : undefined}
                     >
                       {item.char}
                     </span>
@@ -878,7 +1111,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                 })}
 
                 {/* Blinking cursor */}
-                <span className="inline-block w-0.5 h-5 bg-slate-900 animate-pulse align-middle ml-0.5" />
+                <span className="inline-block w-[1.5px] h-[1em] bg-indigo-600 dark:bg-amber-400 animate-pulse align-text-bottom ml-0.5" />
               </div>
 
               {/* 4. On-Screen Virtual Keyboard - 100% Fully Visible */}
@@ -886,7 +1119,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                 <div className="pt-0.5">
                   <KrutiKeyboard
                     activeKey={expectedKey}
-                    isBold={isBold}
+                    isBold={currentFontDarkness !== 'normal'}
                     selectedFont={selectedFont}
                     layoutMode={language}
                   />
@@ -896,24 +1129,27 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
           </div>
 
           {/* Right Side: Settings & Real-Time Stats (2 Speed Methods) */}
-          <div className="w-52 shrink-0 flex flex-col justify-between items-center py-1">
+          <div className="w-52 shrink-0 flex flex-col justify-between items-center py-0.5">
             {/* Settings Box */}
-            <div className="w-full bg-slate-100 border border-slate-300 rounded p-2 shadow-2xs text-xs">
-              <h3 className="font-bold text-slate-800 mb-1">Settings</h3>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-2.5 shadow-xs text-xs"
+            >
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-1.5">Settings</h3>
 
               {/* Backspace Options */}
-              <fieldset className="border border-slate-300 rounded p-1.5 mb-1.5 bg-white/70">
-                <legend className="text-[10px] font-semibold text-slate-700 px-1">
+              <fieldset className="border border-slate-200 dark:border-slate-700 rounded p-1.5 mb-1.5 bg-slate-50 dark:bg-slate-800/80">
+                <legend className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 px-1">
                   Backspace Options
                 </legend>
-                <div className="flex flex-col gap-0.5 text-[11px] text-slate-700">
+                <div className="flex flex-col gap-0.5 text-[11px] text-slate-700 dark:text-slate-300">
                   <label className="flex items-center gap-1 cursor-pointer">
                     <input
                       type="radio"
                       name="backspace"
                       checked={backspaceOption === 'full'}
                       onChange={() => setBackspaceOption('full')}
-                      className="accent-blue-600"
+                      className="accent-indigo-600"
                     />
                     <span>Full Backspace</span>
                   </label>
@@ -923,9 +1159,11 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                       name="backspace"
                       checked={backspaceOption === 'oneWord'}
                       onChange={() => setBackspaceOption('oneWord')}
-                      className="accent-blue-600"
+                      className="accent-indigo-600"
                     />
-                    <span>One Word</span>
+                    <span className="font-semibold text-indigo-900 dark:text-indigo-300">
+                      One Word Backspace
+                    </span>
                   </label>
                   <label className="flex items-center gap-1 cursor-pointer">
                     <input
@@ -933,7 +1171,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                       name="backspace"
                       checked={backspaceOption === 'deactivate'}
                       onChange={() => setBackspaceOption('deactivate')}
-                      className="accent-blue-600"
+                      className="accent-indigo-600"
                     />
                     <span>Deactivate</span>
                   </label>
@@ -941,13 +1179,13 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
               </fieldset>
 
               {/* Checkboxes */}
-              <div className="flex flex-col gap-1 text-[11px] text-slate-700 mb-1.5">
+              <div className="flex flex-col gap-1 text-[11px] text-slate-700 dark:text-slate-300 mb-1.5">
                 <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={showKeyboard}
                     onChange={(e) => setShowKeyboard(e.target.checked)}
-                    className="accent-blue-600"
+                    className="accent-indigo-600"
                   />
                   <span>Show Keyboard</span>
                 </label>
@@ -957,11 +1195,11 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                     type="checkbox"
                     checked={playSounds}
                     onChange={(e) => setPlaySounds(e.target.checked)}
-                    className="accent-blue-600"
+                    className="accent-indigo-600"
                   />
                   <span className="flex items-center gap-1">
                     {playSounds ? (
-                      <Volume2 className="w-3 h-3 text-indigo-600" />
+                      <Volume2 className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                     ) : (
                       <VolumeX className="w-3 h-3 text-slate-400" />
                     )}
@@ -974,7 +1212,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                     type="checkbox"
                     checked={moveOnError}
                     onChange={(e) => setMoveOnError(e.target.checked)}
-                    className="accent-blue-600"
+                    className="accent-indigo-600"
                   />
                   <span>Move on Error</span>
                 </label>
@@ -984,37 +1222,37 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
               {language === 'hindi' && (
                 <button
                   onClick={() => setShowAltModal(true)}
-                  className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 py-0.5 px-1.5 rounded text-[10.5px] font-medium border border-slate-300 cursor-pointer shadow-2xs mb-1.5 transition-colors"
+                  className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 py-1 px-1.5 rounded text-[10.5px] font-medium border border-slate-300 dark:border-slate-700 cursor-pointer shadow-2xs mb-1.5 transition-colors"
                 >
                   Show Alt Codes
                 </button>
               )}
 
               {/* 2 SPEED METHODS LIVE STATUS */}
-              <div className="pt-1.5 border-t border-slate-200 text-[10.5px] text-slate-700 flex flex-col gap-1">
+              <div className="pt-1.5 border-t border-slate-200 dark:border-slate-800 text-[10.5px] text-slate-700 dark:text-slate-300 flex flex-col gap-1">
                 {/* Method 1: Word-by-word */}
-                <div className="bg-amber-50/90 border border-amber-200/80 rounded p-1">
-                  <div className="text-[9.5px] font-bold text-amber-900 flex items-center gap-0.5">
-                    <Target className="w-3 h-3 text-amber-600" />
+                <div className="bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-700/60 rounded p-1">
+                  <div className="text-[9.5px] font-bold text-amber-900 dark:text-amber-300 flex items-center gap-0.5">
+                    <Target className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                     Word Method (Net):
                   </div>
-                  <div className="flex justify-between font-semibold text-amber-950 mt-0.5">
+                  <div className="flex justify-between font-semibold text-amber-950 dark:text-amber-100 mt-0.5">
                     <span>{netWPMWords} WPM</span>
-                    <span className="text-[9px] text-amber-700 font-normal">
+                    <span className="text-[9px] text-amber-700 dark:text-amber-300/80 font-normal">
                       Gross: {grossWPMWords}
                     </span>
                   </div>
                 </div>
 
-                {/* Method 2: 5.5 Chars */}
-                <div className="bg-indigo-50/90 border border-indigo-200/80 rounded p-1">
-                  <div className="text-[9.5px] font-bold text-indigo-900 flex items-center gap-0.5">
-                    <Zap className="w-3 h-3 text-indigo-600" />
-                    5.5 Chars Method:
+                {/* Method 2: Standard 5.5 Chars */}
+                <div className="bg-indigo-50/90 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-700/60 rounded p-1">
+                  <div className="text-[9.5px] font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-0.5">
+                    <Zap className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                    5.5 Keystroke Method:
                   </div>
-                  <div className="flex justify-between font-semibold text-indigo-950 mt-0.5">
+                  <div className="flex justify-between font-semibold text-indigo-950 dark:text-indigo-100 mt-0.5">
                     <span>{netWPM55} WPM</span>
-                    <span className="text-[9px] text-indigo-700 font-normal">
+                    <span className="text-[9px] text-indigo-700 dark:text-indigo-300/80 font-normal">
                       Gross: {grossWPM55}
                     </span>
                   </div>
@@ -1022,19 +1260,19 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
 
                 <div className="flex justify-between pt-0.5">
                   <span>
-                    Acc: <strong className="text-emerald-700">{accuracy}%</strong>
+                    Acc: <strong className="text-emerald-700 dark:text-emerald-400">{accuracy}%</strong>
                   </span>
                   <span>
-                    Errors: <strong className="text-red-600">{errorCount}</strong>
+                    Errors: <strong className="text-red-600 dark:text-red-400">{errorCount}</strong>
                   </span>
                   <span>
                     Time: <strong>{elapsedSeconds}s</strong>
                   </span>
                 </div>
 
-                <div className="w-full bg-slate-200 rounded-full h-1 mt-0.5 overflow-hidden">
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1 mt-0.5 overflow-hidden">
                   <div
-                    className="bg-indigo-600 h-full transition-all duration-200"
+                    className="bg-indigo-600 dark:bg-amber-400 h-full transition-all duration-200"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
@@ -1056,21 +1294,19 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
         </div>
       )}
 
-      {/* Alt Codes Modal */}
-      <AltCodesModal
-        isOpen={showAltModal}
-        onClose={() => setShowAltModal(false)}
-      />
+      {/* Alt Codes Modal Popup */}
+      {showAltModal && <AltCodesModal onClose={() => setShowAltModal(false)} />}
 
-      {/* Result Completion Modal (Shows speeds with both methods) */}
-      <ResultModal
-        isOpen={isFinished}
-        data={resultData}
-        onRetry={handleRestart}
-        onNextLesson={handleNextLesson}
-        onClose={() => setIsFinished(false)}
-        hasNextLesson={selectedLessonId < lessonsList.length}
-      />
+      {/* Comprehensive Result Dialog with BOTH Speed Methods */}
+      {isFinished && resultData && (
+        <ResultModal
+          result={resultData}
+          onRestart={handleRestart}
+          onNextLesson={handleNextLesson}
+          onBackToHome={onBackToHome}
+          hasNextLesson={selectedLessonId < lessonsList.length}
+        />
+      )}
     </div>
   );
 };

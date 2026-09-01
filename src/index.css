@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   /* Real KrutiDev and DevLys TrueType fonts loaded from local public/fonts */
   @font-face {
@@ -24,3 +26,4 @@
     font-family: 'KrutiDev', 'DevLys', sans-serif;
   }
 }
+
