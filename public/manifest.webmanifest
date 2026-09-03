@@ -1,0 +1,47 @@
+{
+  "id": "Ram",
+  "name": "Godara Typing Tutor",
+  "short_name": "GTT",
+  "description": "Godara Typing Tutor - Hindi & English typing tutor and test application for Windows with support for KrutiDev, Remington Gail, and Inscript layouts.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "iarc_rating_id": "14",
+  "prefer_related_applications": false,
+  "categories": [
+    "utilities",
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

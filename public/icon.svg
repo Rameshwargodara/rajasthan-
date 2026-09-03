@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="50%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#ca8a04" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  
+  <!-- Rounded Base Tile -->
+  <rect width="512" height="512" rx="100" fill="url(#bgGrad)" />
+  
+  <!-- Keyboard Inner Panel -->
+  <rect x="56" y="90" width="400" height="280" rx="36" fill="#ffffff" filter="url(#shadow)" opacity="0.95" />
+  
+  <!-- Key grid -->
+  <!-- Row 1 -->
+  <rect x="80" y="116" width="60" height="48" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="110" y="148" font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#1e293b" text-anchor="middle">क</text>
+  
+  <rect x="152" y="116" width="60" height="48" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="182" y="148" font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#1e293b" text-anchor="middle">ख</text>
+  
+  <rect x="224" y="116" width="60" height="48" rx="10" fill="url(#goldGrad)" stroke="#b45309" stroke-width="2"/>
+  <text x="254" y="148" font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#0f172a" text-anchor="middle">ग</text>
+  
+  <rect x="296" y="116" width="60" height="48" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="326" y="148" font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#1e293b" text-anchor="middle">घ</text>
+
+  <rect x="368" y="116" width="64" height="48" rx="10" fill="#fee2e2" stroke="#fca5a5" stroke-width="2"/>
+  <text x="400" y="146" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#dc2626" text-anchor="middle">Bksp</text>
+
+  <!-- Row 2 -->
+  <rect x="80" y="176" width="70" height="48" rx="10" fill="#e0e7ff" stroke="#c7d2fe" stroke-width="2"/>
+  <text x="115" y="206" font-family="system-ui, sans-serif" font-size="16" font-weight="bold" fill="#4338ca" text-anchor="middle">Tab</text>
+
+  <rect x="162" y="176" width="60" height="48" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="192" y="208" font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#1e293b" text-anchor="middle">A</text>
+
+  <rect x="234" y="176" width="60" height="48" rx="10" fill="#fef08a" stroke="#facc15" stroke-width="2"/>
+  <text x="264" y="208" font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#713f12" text-anchor="middle">S</text>
+
+  <rect x="306" y="176" width="60" height="48" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="336" y="208" font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#1e293b" text-anchor="middle">D</text>
+
+  <rect x="378" y="176" width="54" height="48" rx="10" fill="#dcfce7" stroke="#86efac" stroke-width="2"/>
+  <text x="405" y="208" font-family="system-ui, sans-serif" font-size="22" font-weight="bold" fill="#15803d" text-anchor="middle">F</text>
+
+  <!-- Row 3 Space bar -->
+  <rect x="130" y="236" width="250" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="255" y="263" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#64748b" text-anchor="middle">Space Bar</text>
+  
+  <!-- App Title Banner Bottom -->
+  <text x="256" y="420" font-family="system-ui, sans-serif" font-size="34" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1">
+    GODARA
+  </text>
+  <text x="256" y="458" font-family="system-ui, sans-serif" font-size="20" font-weight="600" fill="#93c5fd" text-anchor="middle" letter-spacing="2">
+    TYPING TUTOR
+  </text>
+</svg>

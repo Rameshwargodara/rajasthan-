@@ -8,8 +8,8 @@ export interface DisplaySettings {
   fontDarkness: FontDarkness;
 }
 
-const THEME_KEY = 'soni_typing_theme';
-const DARKNESS_KEY = 'soni_typing_font_darkness';
+const THEME_KEY = 'godara_typing_theme';
+const DARKNESS_KEY = 'godara_typing_font_darkness';
 
 export const getStoredTheme = (): AppTheme => {
   if (typeof window === 'undefined') return 'light';

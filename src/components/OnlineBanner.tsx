@@ -1,4 +1,5 @@
 import React from 'react';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface OnlineBannerProps {
   onOpenLiveTests?: () => void;
@@ -18,12 +19,7 @@ export const OnlineBanner: React.FC<OnlineBannerProps> = ({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-red-600 font-bold text-xs">New</span>
           <h2 className="text-sm font-bold text-slate-900">Online Typing Test</h2>
-          <button
-            onClick={() => {}}
-            className="text-blue-600 hover:text-blue-800 text-xs hover:underline cursor-pointer ml-4 font-medium"
-          >
-            Soni Typing's Phone App
-          </button>
+          <PWAInstallButton className="ml-2" />
         </div>
         <p className="text-[12px] text-slate-700 font-normal mt-0.5 leading-snug">
           ऑनलाइन टाइपिंग टेस्ट लीजिए और अपनी रैंक और टाइपिंग स्पीड अन्य विद्यार्थियों के साथ तुलना कीजिए. ऑनलाइन टेस्ट के लिए इन्टरनेट से जुड़ा होना आवश्यक है.

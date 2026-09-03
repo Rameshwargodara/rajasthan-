@@ -1,6 +1,6 @@
 {
-  "name": "Hindi Typing App",
-  "description": "A Hindi typing tutor and test application for Windows with support for Inscript, Remington Gail, and Kruti Dev layouts.",
+  "name": "Godara Typing Tutor",
+  "description": "A Hindi & English typing tutor and test application for Windows with support for KrutiDev, Remington Gail, and Inscript layouts.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

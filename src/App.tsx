@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TitleBar } from './components/TitleBar';
 import { MenuBar } from './components/MenuBar';
 import { Toolbar } from './components/Toolbar';
@@ -7,6 +7,7 @@ import { ModuleCard } from './components/ModuleCard';
 import { ExamCard } from './components/ExamCard';
 import { LessonModal } from './components/LessonModal';
 import { HindiTypingLesson } from './components/HindiTypingLesson';
+import { EnglishTypingTestScreen } from './components/EnglishTypingTestScreen';
 import {
   AppTheme,
   FontDarkness,
@@ -14,6 +15,12 @@ import {
   getStoredFontDarkness,
   getStoredTheme,
 } from './lib/displaySettings';
+import {
+  TypingLayout,
+  getStoredTypingSettings,
+  getStoredModuleProgress,
+  buildModuleId,
+} from './lib/persistence';
 import {
   AllInOneStamp,
   SscEmblem,
@@ -35,8 +42,15 @@ import {
 import { TypingModule, SelectedModuleState } from './types';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'home' | 'typing-lesson'>('typing-lesson');
-  const [typingLanguage, setTypingLanguage] = useState<'hindi' | 'english'>('hindi');
+  const [currentView, setCurrentView] = useState<'home' | 'typing-lesson' | 'english-test'>('home');
+  const [initialEnglishLessonId, setInitialEnglishLessonId] = useState<number>(1);
+  const initialSettings = useMemo(() => getStoredTypingSettings(), []);
+  const [typingLanguage, setTypingLanguage] = useState<'hindi' | 'english'>(
+    () => initialSettings.language || 'hindi'
+  );
+  const [activeLayout, setActiveLayout] = useState<TypingLayout>(
+    () => initialSettings.selectedLayout || 'krutidev'
+  );
   const [theme, setTheme] = useState<AppTheme>(getStoredTheme);
   const [fontDarkness, setFontDarkness] = useState<FontDarkness>(getStoredFontDarkness);
   const [modalState, setModalState] = useState<SelectedModuleState>({
@@ -51,13 +65,13 @@ export default function App() {
   const handleToggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
-    localStorage.setItem('soni_typing_theme', nextTheme);
+    localStorage.setItem('godara_typing_theme', nextTheme);
     applyThemeToDOM(nextTheme);
   };
 
   const handleChangeFontDarkness = (darkness: FontDarkness) => {
     setFontDarkness(darkness);
-    localStorage.setItem('soni_typing_font_darkness', darkness);
+    localStorage.setItem('godara_typing_font_darkness', darkness);
   };
 
   const handleOpenModule = (
@@ -65,18 +79,68 @@ export default function App() {
     category: string,
     subCategory?: string
   ) => {
-    // If it's the Hindi KrutiDev Learn / Test, open the specific lesson screen
+    // 1. Direct routes to dedicated English Test Screen (100 RSSB LDC Lessons)
     if (
-      category.includes('Hindi Typing - KrutiDev') ||
-      category.includes('Hindi Typing - Mangal') ||
-      title.includes('Hindi')
+      title === 'Take Tests' && category === 'English Typing' ||
+      title.includes('LDC') ||
+      title.includes('RSSB') ||
+      title.includes('RSMSSB') ||
+      subCategory?.includes('RSMSSB') ||
+      title === 'English Test' ||
+      title === 'SSC English Test' ||
+      title === 'NTPC English Test'
     ) {
+      setInitialEnglishLessonId(1);
+      setCurrentView('english-test');
+      return;
+    }
+
+    // 2. KrutiDev layout routes
+    if (category.includes('KrutiDev') || title.includes('KrutiDev')) {
+      setActiveLayout('krutidev');
       setTypingLanguage('hindi');
       setCurrentView('typing-lesson');
       return;
     }
 
+    // 3. Remington GAIL routes
+    if (subCategory?.includes('Remington GAIL')) {
+      setActiveLayout('remington_gail');
+      setTypingLanguage('hindi');
+      setCurrentView('typing-lesson');
+      return;
+    }
+
+    // 4. INSCRIPT routes
+    if (subCategory?.includes('INSCRIPT') || subCategory?.includes('INSCIPT')) {
+      setActiveLayout('inscript');
+      setTypingLanguage('hindi');
+      setCurrentView('typing-lesson');
+      return;
+    }
+
+    // 5. Remington CBI routes
+    if (subCategory?.includes('Remington CBI') || subCategory?.includes('Remignton CBI')) {
+      setActiveLayout('remington_cbi');
+      setTypingLanguage('hindi');
+      setCurrentView('typing-lesson');
+      return;
+    }
+
+    // 6. Generic Hindi Mangal
+    if (
+      category.includes('Hindi Typing - Mangal') ||
+      title.includes('Hindi')
+    ) {
+      setActiveLayout('remington_gail');
+      setTypingLanguage('hindi');
+      setCurrentView('typing-lesson');
+      return;
+    }
+
+    // 7. English Learn Typing
     if (category.includes('English Typing') || title.includes('English')) {
+      setActiveLayout('english');
       setTypingLanguage('english');
       setCurrentView('typing-lesson');
       return;
@@ -98,11 +162,23 @@ export default function App() {
     setModalState({ isOpen: false, module: null });
   };
 
+  if (currentView === 'english-test') {
+    return (
+      <EnglishTypingTestScreen
+        initialLessonId={initialEnglishLessonId}
+        initialTheme={theme}
+        onBackToHome={() => setCurrentView('home')}
+      />
+    );
+  }
+
   if (currentView === 'typing-lesson') {
     return (
       <HindiTypingLesson
         initialLanguage={typingLanguage}
+        initialLayout={activeLayout}
         onBackToHome={() => setCurrentView('home')}
+        onOpenEnglishTestScreen={() => setCurrentView('english-test')}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         fontDarkness={fontDarkness}
@@ -110,6 +186,18 @@ export default function App() {
       />
     );
   }
+
+  // Pre-calculate module progress for each tile on the dashboard
+  const enLearnProg = getStoredModuleProgress(buildModuleId('english', 2), 60);
+  const enTestProg = getStoredModuleProgress(buildModuleId('english', 4), 60);
+  const kdLearnProg = getStoredModuleProgress(buildModuleId('krutidev', 2), 60);
+  const kdTestProg = getStoredModuleProgress(buildModuleId('krutidev', 4), 60);
+  const gailLearnProg = getStoredModuleProgress(buildModuleId('remington_gail', 2), 60);
+  const gailTestProg = getStoredModuleProgress(buildModuleId('remington_gail', 4), 60);
+  const inscriptLearnProg = getStoredModuleProgress(buildModuleId('inscript', 2), 60);
+  const inscriptTestProg = getStoredModuleProgress(buildModuleId('inscript', 4), 60);
+  const cbiLearnProg = getStoredModuleProgress(buildModuleId('remington_cbi', 2), 60);
+  const cbiTestProg = getStoredModuleProgress(buildModuleId('remington_cbi', 4), 60);
 
   return (
     <div
@@ -121,7 +209,7 @@ export default function App() {
       }`}
     >
       {/* Top Windows Chrome Bar */}
-      <TitleBar title="Soni Typing Tutor 5.1.168" />
+      <TitleBar title="Godara Typing Tutor 5.1.168" />
 
       {/* Menu Bar */}
       <MenuBar />
@@ -164,6 +252,8 @@ export default function App() {
                     label="Learn Typing"
                     topLetters={['A', 'B']}
                     bottomLetters={['C', 'D']}
+                    progressPercent={enLearnProg.progressPercentage}
+                    lastLesson={enLearnProg.lastLessonId}
                     onClick={() =>
                       handleOpenModule('Learn Typing', 'English Typing')
                     }
@@ -173,6 +263,8 @@ export default function App() {
                     label="Take Tests"
                     topLetters={['A', 'B']}
                     bottomLetters={['C', 'D']}
+                    progressPercent={enTestProg.progressPercentage}
+                    lastLesson={enTestProg.lastLessonId}
                     onClick={() =>
                       handleOpenModule('Take Tests', 'English Typing')
                     }
@@ -202,6 +294,8 @@ export default function App() {
                     label="Learn Typing"
                     topLetters={['अ', 'ब']}
                     bottomLetters={['स', 'द']}
+                    progressPercent={kdLearnProg.progressPercentage}
+                    lastLesson={kdLearnProg.lastLessonId}
                     onClick={() =>
                       handleOpenModule(
                         'Learn Typing',
@@ -214,6 +308,8 @@ export default function App() {
                     label="Take Tests"
                     topLetters={['अ', 'ब']}
                     bottomLetters={['स', 'द']}
+                    progressPercent={kdTestProg.progressPercentage}
+                    lastLesson={kdTestProg.lastLessonId}
                     onClick={() =>
                       handleOpenModule(
                         'Take Tests',
@@ -243,6 +339,8 @@ export default function App() {
                         label="Learn Typing"
                         topLetters={['अ', 'ब']}
                         bottomLetters={['स', 'द']}
+                        progressPercent={gailLearnProg.progressPercentage}
+                        lastLesson={gailLearnProg.lastLessonId}
                         onClick={() =>
                           handleOpenModule(
                             'Learn Typing',
@@ -256,6 +354,8 @@ export default function App() {
                         label="Take Test"
                         topLetters={['अ', 'ब']}
                         bottomLetters={['स', 'द']}
+                        progressPercent={gailTestProg.progressPercentage}
+                        lastLesson={gailTestProg.lastLessonId}
                         onClick={() =>
                           handleOpenModule(
                             'Take Test',
@@ -278,6 +378,8 @@ export default function App() {
                         label="Learn Typing"
                         topLetters={['अ', 'ब']}
                         bottomLetters={['स', 'द']}
+                        progressPercent={inscriptLearnProg.progressPercentage}
+                        lastLesson={inscriptLearnProg.lastLessonId}
                         onClick={() =>
                           handleOpenModule(
                             'Learn Typing',
@@ -291,6 +393,8 @@ export default function App() {
                         label="Take Test"
                         topLetters={['अ', 'ब']}
                         bottomLetters={['स', 'द']}
+                        progressPercent={inscriptTestProg.progressPercentage}
+                        lastLesson={inscriptTestProg.lastLessonId}
                         onClick={() =>
                           handleOpenModule(
                             'Take Test',
@@ -313,6 +417,8 @@ export default function App() {
                         label="Learn Typing"
                         topLetters={['अ', 'ब']}
                         bottomLetters={['स', 'द']}
+                        progressPercent={cbiLearnProg.progressPercentage}
+                        lastLesson={cbiLearnProg.lastLessonId}
                         onClick={() =>
                           handleOpenModule(
                             'Learn Typing',
@@ -326,6 +432,8 @@ export default function App() {
                         label="Take Test"
                         topLetters={['अ', 'ब']}
                         bottomLetters={['स', 'द']}
+                        progressPercent={cbiTestProg.progressPercentage}
+                        lastLesson={cbiTestProg.lastLessonId}
                         onClick={() =>
                           handleOpenModule(
                             'Take Test',

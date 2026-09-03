@@ -26,6 +26,18 @@ import {
   getStoredTheme,
 } from '../lib/displaySettings';
 import {
+  TypingLayout,
+  FontChoice,
+  LAYOUT_INFO,
+  buildModuleId,
+  getStoredTypingSettings,
+  saveTypingSettings,
+  getStoredModuleProgress,
+  saveCurrentLesson,
+  recordLessonProgress,
+  resetModuleProgress,
+} from '../lib/persistence';
+import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
@@ -40,11 +52,16 @@ import {
   Target,
   Sun,
   Moon,
+  Award,
+  CheckCircle2,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 interface HindiTypingLessonProps {
   onBackToHome: () => void;
+  onOpenEnglishTestScreen?: () => void;
   initialLanguage?: 'hindi' | 'english';
+  initialLayout?: TypingLayout;
   theme?: AppTheme;
   onToggleTheme?: () => void;
   fontDarkness?: FontDarkness;
@@ -128,7 +145,9 @@ function isIndividualVowel(chars: Array<string | { char: string }>, idx: number)
 
 export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
   onBackToHome,
-  initialLanguage = 'hindi',
+  onOpenEnglishTestScreen,
+  initialLanguage,
+  initialLayout,
   theme: propTheme,
   onToggleTheme: propOnToggleTheme,
   fontDarkness: propFontDarkness,
@@ -148,7 +167,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
     } else {
       const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
       setInternalTheme(nextTheme);
-      localStorage.setItem('soni_typing_theme', nextTheme);
+      localStorage.setItem('godara_typing_theme', nextTheme);
       applyThemeToDOM(nextTheme);
     }
   };
@@ -162,7 +181,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
       propOnChangeFontDarkness(darkness);
     } else {
       setInternalDarkness(darkness);
-      localStorage.setItem('soni_typing_font_darkness', darkness);
+      localStorage.setItem('godara_typing_font_darkness', darkness);
     }
   };
 
@@ -171,14 +190,30 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
     [currentFontDarkness]
   );
 
-  // Language mode: Hindi (KrutiDev/DevLys) or English
-  const [language, setLanguage] = useState<'hindi' | 'english'>(initialLanguage);
+  // Initial persisted settings
+  const initialStored = useMemo(() => getStoredTypingSettings(), []);
 
-  // Current Selected Exercise (1 to 60)
-  const [selectedLessonId, setSelectedLessonId] = useState<number>(1);
+  // Selected layout (KrutiDev, Remington GAIL, INSCRIPT, Remington CBI, English QWERTY)
+  const [selectedLayout, setSelectedLayout] = useState<TypingLayout>(() => {
+    if (initialLayout) return initialLayout;
+    if (initialStored.selectedLayout) return initialStored.selectedLayout;
+    return initialLanguage === 'english' ? 'english' : 'krutidev';
+  });
+
+  // Language mode: Hindi (KrutiDev/DevLys) or English
+  const [language, setLanguage] = useState<'hindi' | 'english'>(() => {
+    if (initialLanguage) return initialLanguage;
+    return selectedLayout === 'english' ? 'english' : 'hindi';
+  });
 
   // Active step (1: Instructions, 2: Learn Keys, 3: Practice Words, 4: Paragraphs)
-  const [activeStep, setActiveStep] = useState<number>(2);
+  const [activeStep, setActiveStep] = useState<number>(() => initialStored.activeStep ?? 2);
+
+  // Module identifier for persistence
+  const moduleId = useMemo(
+    () => buildModuleId(selectedLayout, activeStep),
+    [selectedLayout, activeStep]
+  );
 
   // Active lessons pool based on language and step
   const lessonsList: Array<HindiLesson | EnglishLesson> = useMemo(() => {
@@ -193,6 +228,29 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
     }
     return HINDI_LEARN_KEYS_LESSONS;
   }, [language, activeStep]);
+
+  // Module progress record loaded from localStorage
+  const [moduleProgress, setModuleProgress] = useState(() =>
+    getStoredModuleProgress(moduleId, 60)
+  );
+
+  // Keep moduleProgress in sync when moduleId or lesson count changes
+  useEffect(() => {
+    const loaded = getStoredModuleProgress(moduleId, lessonsList.length || 60);
+    setModuleProgress(loaded);
+  }, [moduleId, lessonsList.length]);
+
+  // Current Selected Exercise (1 to 60) - restored from module's saved lastLessonId
+  const [selectedLessonId, setSelectedLessonId] = useState<number>(() => {
+    const saved = getStoredModuleProgress(
+      buildModuleId(
+        initialLayout ?? initialStored.selectedLayout ?? 'krutidev',
+        initialStored.activeStep ?? 2
+      ),
+      60
+    );
+    return saved.lastLessonId || initialStored.selectedLessonId || 1;
+  });
 
   const currentLesson =
     lessonsList.find((l) => l.id === selectedLessonId) || lessonsList[0] || {
@@ -214,9 +272,46 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
   >([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
 
+  // Layout Switch Handler
+  const handleLayoutChange = (newLayout: TypingLayout) => {
+    setSelectedLayout(newLayout);
+    const newLang = newLayout === 'english' ? 'english' : 'hindi';
+    setLanguage(newLang);
+    const newModuleId = buildModuleId(newLayout, activeStep);
+    const saved = getStoredModuleProgress(newModuleId, lessonsList.length || 60);
+    const targetLessonId = saved.lastLessonId || 1;
+    setSelectedLessonId(targetLessonId);
+    setModuleProgress(saved);
+    setTypedChars([]);
+    setCurrentIndex(0);
+    setErrorCount(0);
+    setBackspaceCount(0);
+    setStartTime(null);
+    setElapsedSeconds(0);
+    setIsFinished(false);
+    setResultData(null);
+    targetContainerRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    userContainerRef.current?.scrollTo({ top: 0, behavior: 'instant' });
+    saveTypingSettings({
+      selectedLayout: newLayout,
+      language: newLang,
+      selectedLessonId: targetLessonId,
+      lastActiveModuleId: newModuleId,
+    });
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 40);
+  };
+
   // Switch Lesson
   const handleSelectLesson = (id: number) => {
     setSelectedLessonId(id);
+    saveCurrentLesson(moduleId, id, activeStep);
+    saveTypingSettings({
+      selectedLessonId: id,
+      activeStep,
+      lastActiveModuleId: moduleId,
+    });
     setTypedChars([]);
     setCurrentIndex(0);
     setErrorCount(0);
@@ -235,7 +330,17 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
   // Switch Step Handler
   const handleStepChange = (newStep: number) => {
     setActiveStep(newStep);
-    setSelectedLessonId(1);
+    const newModuleId = buildModuleId(selectedLayout, newStep);
+    const saved = getStoredModuleProgress(newModuleId, 60);
+    const targetLessonId = saved.lastLessonId || 1;
+    setSelectedLessonId(targetLessonId);
+    setModuleProgress(saved);
+    saveCurrentLesson(newModuleId, targetLessonId, newStep);
+    saveTypingSettings({
+      activeStep: newStep,
+      selectedLessonId: targetLessonId,
+      lastActiveModuleId: newModuleId,
+    });
     setTypedChars([]);
     setCurrentIndex(0);
     setErrorCount(0);
@@ -252,17 +357,69 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
   };
 
   // Font settings
-  const [selectedFont, setSelectedFont] = useState<'KrutiDev' | 'DevLys'>('KrutiDev');
-  const [fontSize, setFontSize] = useState<number>(26);
+  const [selectedFont, setSelectedFont] = useState<FontChoice>(
+    () => initialStored.selectedFont ?? 'KrutiDev'
+  );
+  const [fontSize, setFontSize] = useState<number>(() => initialStored.fontSize ?? 26);
+
+  const handleFontChange = (font: FontChoice) => {
+    setSelectedFont(font);
+    saveTypingSettings({ selectedFont: font });
+  };
+
+  const handleFontSizeChange = (updater: (prev: number) => number) => {
+    setFontSize((prev) => {
+      const next = updater(prev);
+      saveTypingSettings({ fontSize: next });
+      return next;
+    });
+  };
 
   // Settings
   const [backspaceOption, setBackspaceOption] = useState<
     'full' | 'oneWord' | 'deactivate'
-  >('oneWord');
-  const [showKeyboard, setShowKeyboard] = useState<boolean>(true);
-  const [playSounds, setPlaySounds] = useState<boolean>(false);
-  const [moveOnError, setMoveOnError] = useState<boolean>(true);
+  >(() => initialStored.backspaceOption ?? 'oneWord');
+  const [showKeyboard, setShowKeyboard] = useState<boolean>(
+    () => initialStored.showKeyboard ?? true
+  );
+  const [playSounds, setPlaySounds] = useState<boolean>(
+    () => initialStored.playSounds ?? false
+  );
+  const [moveOnError, setMoveOnError] = useState<boolean>(
+    () => initialStored.moveOnError ?? true
+  );
   const [showAltModal, setShowAltModal] = useState<boolean>(false);
+
+  const handleBackspaceOptionChange = (opt: 'full' | 'oneWord' | 'deactivate') => {
+    setBackspaceOption(opt);
+    saveTypingSettings({ backspaceOption: opt });
+  };
+
+  const handleShowKeyboardToggle = (val: boolean) => {
+    setShowKeyboard(val);
+    saveTypingSettings({ showKeyboard: val });
+  };
+
+  const handlePlaySoundsToggle = (val: boolean) => {
+    setPlaySounds(val);
+    saveTypingSettings({ playSounds: val });
+  };
+
+  const handleMoveOnErrorToggle = (val: boolean) => {
+    setMoveOnError(val);
+    saveTypingSettings({ moveOnError: val });
+  };
+
+  const handleResetModule = () => {
+    const isConfirmed = window.confirm(
+      `Reset all typing progress for ${LAYOUT_INFO[selectedLayout].name} (Step ${activeStep})?`
+    );
+    if (isConfirmed) {
+      const reset = resetModuleProgress(moduleId, lessonsList.length);
+      setModuleProgress(reset);
+      handleSelectLesson(1);
+    }
+  };
 
   // Stats
   const [errorCount, setErrorCount] = useState<number>(0);
@@ -306,25 +463,29 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
 
   // Auto-scroll target text box
   useEffect(() => {
+    if (currentIndex === 0) {
+      if (targetContainerRef.current) targetContainerRef.current.scrollTop = 0;
+      if (userContainerRef.current) userContainerRef.current.scrollTop = 0;
+      return;
+    }
+
     if (activeSpanRef.current && targetContainerRef.current) {
       const container = targetContainerRef.current;
       const element = activeSpanRef.current;
-      const elementTop = element.offsetTop;
-      const elementBottom = elementTop + element.offsetHeight;
-      const containerScrollTop = container.scrollTop;
-      const containerHeight = container.clientHeight;
-      const visibleBottom = containerScrollTop + containerHeight;
 
-      if (elementBottom > visibleBottom - 2) {
-        container.scrollTo({
-          top: elementBottom - containerHeight + 6,
-          behavior: 'smooth',
-        });
-      } else if (elementTop < containerScrollTop) {
-        container.scrollTo({
-          top: Math.max(0, elementTop - 4),
-          behavior: 'smooth',
-        });
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+
+      const elementRelativeTop = elementRect.top - containerRect.top;
+      const elementRelativeBottom = elementRect.bottom - containerRect.top;
+
+      const topThreshold = 18;
+      const bottomThreshold = container.clientHeight - 36;
+
+      if (elementRelativeBottom > bottomThreshold) {
+        container.scrollTop += (elementRelativeBottom - bottomThreshold) + 14;
+      } else if (elementRelativeTop < topThreshold) {
+        container.scrollTop = Math.max(0, container.scrollTop + elementRelativeTop - topThreshold);
       }
     }
   }, [currentIndex]);
@@ -333,12 +494,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
   useEffect(() => {
     if (userContainerRef.current) {
       const userBox = userContainerRef.current;
-      if (userBox.scrollHeight - userBox.scrollTop > userBox.clientHeight) {
-        userBox.scrollTo({
-          top: userBox.scrollHeight - userBox.clientHeight,
-          behavior: 'smooth',
-        });
-      }
+      userBox.scrollTop = userBox.scrollHeight;
     }
   }, [typedChars.length]);
 
@@ -391,11 +547,16 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
     finalBackspaces: number
   ) => {
     setIsFinished(true);
+    const finalElapsed = startTime
+      ? Math.max(1, Math.floor((Date.now() - startTime) / 1000))
+      : Math.max(1, elapsedSeconds);
+    setElapsedSeconds(finalElapsed);
+
     const finalTotal = finalTyped.length;
     const finalCorrect = finalTyped.filter((t) => t.isCorrect).length;
     const finalAccuracy =
-      finalTotal > 0 ? Math.round((finalCorrect / finalTotal) * 100) : 100;
-    const finalMinutes = Math.max(1 / 60, elapsedSeconds / 60);
+      finalTotal > 0 ? Number(((finalCorrect / finalTotal) * 100).toFixed(2)) : 100;
+    const finalMinutes = Math.max(1 / 60, finalElapsed / 60);
 
     const fTypedStr = finalTyped.map((t) => t.char).join('');
     const fTypedWords = fTypedStr.trim().split(/\s+/).filter(Boolean);
@@ -408,8 +569,13 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
 
     const gWPMWords = Math.round(fTypedWords.length / finalMinutes);
     const nWPMWords = Math.round(fCorrectWords / finalMinutes);
-    const gWPM55 = Math.round((finalTotal / 5.5) / finalMinutes);
-    const nWPM55 = Math.max(0, Math.round((finalCorrect / 5.5) / finalMinutes));
+    const gWPM5 = Math.round((finalTotal / 5) / finalMinutes);
+    const nWPM5 = Math.max(0, Math.round((finalCorrect / 5) / finalMinutes));
+
+    const gKPM = Math.round(finalTotal / finalMinutes);
+    const gKPH = gKPM * 60;
+    const nKPM = Math.round(finalCorrect / finalMinutes);
+    const nKPH = nKPM * 60;
 
     setResultData({
       lessonTitle: currentLesson.title,
@@ -418,16 +584,35 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
       totalChars: finalTotal,
       correctChars: finalCorrect,
       errorCount: finalErrors,
-      elapsedSeconds,
+      elapsedSeconds: finalElapsed,
       accuracy: finalAccuracy,
+      grossWPM5: gWPM5,
+      netWPM5: nWPM5,
+      grossKPM: gKPM,
+      grossKPH: gKPH,
+      netKPM: nKPM,
+      netKPH: nKPH,
       spaceWordsTotal: fTypedWords.length,
       spaceWordsCorrect: fCorrectWords,
+      spaceWordsIncorrect: Math.max(0, fTypedWords.length - fCorrectWords),
       grossWPMWords: gWPMWords,
       netWPMWords: nWPMWords,
-      grossWPM55: gWPM55,
-      netWPM55: nWPM55,
       backspaceCount: finalBackspaces,
     });
+
+    // Record completed lesson progress in persistence layer
+    const updatedProgress = recordLessonProgress(
+      moduleId,
+      selectedLessonId,
+      100,
+      lessonsList.length,
+      {
+        netWPM: nWPM5,
+        accuracy: finalAccuracy,
+        isCompleted: true,
+      }
+    );
+    setModuleProgress(updatedProgress);
   };
 
   // Backspace action handler with robust support for One Word mode and Ctrl+Backspace
@@ -588,9 +773,9 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
     >
       {/* Title Bar */}
       <TitleBar
-        title={`Soni Typing Tutor 5.1.168 - ${
-          language === 'hindi' ? 'Hindi Typing (KrutiDev)' : 'English Typing'
-        }`}
+        title={`Godara Typing Tutor 5.1.168 - ${LAYOUT_INFO[selectedLayout].name} (${
+          language === 'hindi' ? 'Hindi' : 'English'
+        })`}
       />
 
       {/* Steps Header Nav Bar */}
@@ -681,6 +866,72 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Home Menu</span>
           </button>
+        </div>
+      </div>
+
+      {/* Typing Layout Switcher Bar & Auto-Persistence Status */}
+      <div
+        id="typing-layout-bar"
+        className="bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs"
+      >
+        {/* Layout Switcher Tabs */}
+        <div className="flex items-center gap-1 overflow-x-auto">
+          <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 mr-1 flex items-center gap-1">
+            <SlidersHorizontal className="w-3 h-3" />
+            Layout:
+          </span>
+
+          {(
+            [
+              'krutidev',
+              'remington_gail',
+              'inscript',
+              'remington_cbi',
+              'english',
+            ] as TypingLayout[]
+          ).map((lay) => {
+            const isSelected = selectedLayout === lay;
+            const info = LAYOUT_INFO[lay];
+            return (
+              <button
+                key={lay}
+                onClick={() => handleLayoutChange(lay)}
+                className={`px-2 py-0.5 rounded text-[11px] font-semibold transition-all cursor-pointer border ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white border-indigo-700 shadow-2xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                }`}
+                title={info.description}
+              >
+                {info.shortName}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Module Progress & Persistence Indicator */}
+        <div className="flex items-center gap-2 text-[11px]">
+          {onOpenEnglishTestScreen && (
+            <button
+              onClick={onOpenEnglishTestScreen}
+              className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold text-[11px] shadow-2xs flex items-center gap-1 cursor-pointer transition-colors"
+              title="Open Soni Typing Tutor Exam Mode with 100 RSSB LDC English Lessons"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>RSSB LDC 100 Tests (Exam Mode)</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded shadow-2xs">
+            <Award className="w-3.5 h-3.5 text-amber-500" />
+            <span className="text-slate-600 dark:text-slate-400">Module Progress:</span>
+            <span className="font-bold text-indigo-600 dark:text-amber-400">
+              {moduleProgress.progressPercentage}%
+            </span>
+            <span className="text-slate-400 dark:text-slate-500">
+              ({moduleProgress.completedLessons.length}/{lessonsList.length})
+            </span>
+          </div>
         </div>
       </div>
 
@@ -892,26 +1143,23 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                   const isWrong = isPassed && typedChars[idx] && !typedChars[idx].isCorrect;
                   const isStandalone = language === 'hindi' && isIndividualVowel(targetChars, idx);
 
-                  // Space Character rendering - sleek, compact
+                  // Space Character rendering - zero layout shift, seamless font space
                   if (char === ' ') {
-                    if (isCurrent) {
-                      return (
-                        <span
-                          key={idx}
-                          ref={activeSpanRef}
-                          className="inline-block w-2 h-[0.8em] align-middle bg-[#fde047] dark:bg-[#eab308] text-black text-[7.5px] leading-none font-bold text-center rounded-[1px] mx-0.5 select-none shadow-2xs"
-                        >
-                          ␣
-                        </span>
-                      );
-                    }
                     return (
                       <span
                         key={idx}
-                        className={
-                          isPassed
+                        ref={isCurrent ? activeSpanRef : null}
+                        className={`inline px-0 ${
+                          isCurrent
+                            ? 'bg-[#fde047] dark:bg-[#eab308] text-slate-950 font-bold rounded-[1px] shadow-2xs'
+                            : isPassed
                             ? 'text-slate-400 dark:text-slate-500'
                             : darknessStyle.className
+                        }`}
+                        style={
+                          !isCurrent && !isPassed
+                            ? darknessStyle.cssStyle
+                            : undefined
                         }
                       >
                         {' '}
@@ -1014,11 +1262,14 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                       handleSelectLesson(Number(e.target.value));
                     }}
                   >
-                    {lessonsList.map((lesson) => (
-                      <option key={lesson.id} value={lesson.id} className="dark:bg-slate-800">
-                        Exercise {lesson.id}
-                      </option>
-                    ))}
+                    {lessonsList.map((lesson) => {
+                      const isCompleted = moduleProgress.completedLessons.includes(lesson.id);
+                      return (
+                        <option key={lesson.id} value={lesson.id} className="dark:bg-slate-800">
+                          Exercise {lesson.id} {isCompleted ? '✓' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
 
                   <button
@@ -1057,7 +1308,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setFontSize((prev) => Math.max(16, prev - 2));
+                      handleFontSizeChange((prev) => Math.max(16, prev - 2));
                     }}
                     className="bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-100 text-xs cursor-pointer font-bold border border-slate-300 dark:border-slate-600"
                   >
@@ -1069,7 +1320,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setFontSize((prev) => Math.min(42, prev + 2));
+                      handleFontSizeChange((prev) => Math.min(42, prev + 2));
                     }}
                     className="bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 px-1.5 py-0.5 rounded text-slate-800 dark:text-slate-100 text-xs cursor-pointer font-bold border border-slate-300 dark:border-slate-600"
                   >
@@ -1122,6 +1373,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                     isBold={currentFontDarkness !== 'normal'}
                     selectedFont={selectedFont}
                     layoutMode={language}
+                    layout={selectedLayout}
                   />
                 </div>
               )}
@@ -1135,7 +1387,12 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
               onClick={(e) => e.stopPropagation()}
               className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md p-2.5 shadow-xs text-xs"
             >
-              <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-1.5">Settings</h3>
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-1.5 flex items-center justify-between">
+                <span>Settings</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-normal flex items-center gap-0.5">
+                  <CheckCircle2 className="w-3 h-3" /> Auto-saved
+                </span>
+              </h3>
 
               {/* Backspace Options */}
               <fieldset className="border border-slate-200 dark:border-slate-700 rounded p-1.5 mb-1.5 bg-slate-50 dark:bg-slate-800/80">
@@ -1148,7 +1405,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                       type="radio"
                       name="backspace"
                       checked={backspaceOption === 'full'}
-                      onChange={() => setBackspaceOption('full')}
+                      onChange={() => handleBackspaceOptionChange('full')}
                       className="accent-indigo-600"
                     />
                     <span>Full Backspace</span>
@@ -1158,7 +1415,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                       type="radio"
                       name="backspace"
                       checked={backspaceOption === 'oneWord'}
-                      onChange={() => setBackspaceOption('oneWord')}
+                      onChange={() => handleBackspaceOptionChange('oneWord')}
                       className="accent-indigo-600"
                     />
                     <span className="font-semibold text-indigo-900 dark:text-indigo-300">
@@ -1170,7 +1427,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                       type="radio"
                       name="backspace"
                       checked={backspaceOption === 'deactivate'}
-                      onChange={() => setBackspaceOption('deactivate')}
+                      onChange={() => handleBackspaceOptionChange('deactivate')}
                       className="accent-indigo-600"
                     />
                     <span>Deactivate</span>
@@ -1184,7 +1441,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                   <input
                     type="checkbox"
                     checked={showKeyboard}
-                    onChange={(e) => setShowKeyboard(e.target.checked)}
+                    onChange={(e) => handleShowKeyboardToggle(e.target.checked)}
                     className="accent-indigo-600"
                   />
                   <span>Show Keyboard</span>
@@ -1194,7 +1451,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                   <input
                     type="checkbox"
                     checked={playSounds}
-                    onChange={(e) => setPlaySounds(e.target.checked)}
+                    onChange={(e) => handlePlaySoundsToggle(e.target.checked)}
                     className="accent-indigo-600"
                   />
                   <span className="flex items-center gap-1">
@@ -1211,7 +1468,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                   <input
                     type="checkbox"
                     checked={moveOnError}
-                    onChange={(e) => setMoveOnError(e.target.checked)}
+                    onChange={(e) => handleMoveOnErrorToggle(e.target.checked)}
                     className="accent-indigo-600"
                   />
                   <span>Move on Error</span>
@@ -1227,6 +1484,16 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                   Show Alt Codes
                 </button>
               )}
+
+              {/* Reset Module Progress Button */}
+              <button
+                onClick={handleResetModule}
+                title="Reset progress for this module"
+                className="w-full bg-slate-50 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/40 text-slate-600 hover:text-red-700 dark:text-slate-400 dark:hover:text-red-300 py-0.5 px-1.5 rounded text-[10px] border border-slate-200 dark:border-slate-700 cursor-pointer transition-colors mb-1.5 flex items-center justify-center gap-1"
+              >
+                <RotateCcw className="w-2.5 h-2.5" />
+                <span>Reset Module Progress</span>
+              </button>
 
               {/* 2 SPEED METHODS LIVE STATUS */}
               <div className="pt-1.5 border-t border-slate-200 dark:border-slate-800 text-[10.5px] text-slate-700 dark:text-slate-300 flex flex-col gap-1">
@@ -1300,9 +1567,13 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
       {/* Comprehensive Result Dialog with BOTH Speed Methods */}
       {isFinished && resultData && (
         <ResultModal
+          isOpen={true}
           result={resultData}
+          data={resultData}
           onRestart={handleRestart}
+          onRetry={handleRestart}
           onNextLesson={handleNextLesson}
+          onClose={handleRestart}
           onBackToHome={onBackToHome}
           hasNextLesson={selectedLessonId < lessonsList.length}
         />

@@ -68,7 +68,7 @@ export const HINDI_LEARN_KEYS_LESSONS: HindiLesson[] = [
     description:
       "'''' kkkk '''' '''' 'k'k'k'k 'k'k'k'k शश केके केके केके सेसे सेसे येये येये केके केके केके हेहे रेरे रेरे के को हे हो से सो शे शो के को हे हो से सो ये यो शे शो शेशे शेशे शेर शेर शेर शोर शोर कोर कोस होश सोर कोर कोरा कोरी कोस शेर शक काश यश राशी राशी काशी काशी शहर शहर शाक शाक शोक कोसी रो शीशा",
     content:
-      "'''' kkkk '''' '''' 'k'k'k'k 'k'k'k'k 'k'k dsds dsds dsds lsls lsls ;s;s ;s;s dsds dsds dsds gsgs jsjs jsjs ds dks gs gks ls lks 's 'ks ds dks gs gks ls lks ;s ;ks 's 'ks 's's 's's 'sj 'sj 'sj 'ksj 'ksj dksj dksl gks' lksj dksj dksjk dksjh dksl 'sj 'kd dk' ;' jk'kh jk'kh dk'kh dk'kh 'kgj 'kgj 'kkd 'kkd 'ksd dkslh jks 'kh'kk",
+      "'''' kkkk '''' '''' 'k'k'k'k 'k'k'k'k 'k'k dsds dsds dsds lsls lsls ;s;s ;s;s dsds dsds dsds gsgs jsjs jsjs ds dks gs gks ls lks 'ks 'kks ds dks gs gks ls lks ;s ;ks 'ks 'kks 'ks'ks 'ks'ks 'ksj 'ksj 'ksj 'kksj 'kksj dksj dksl gks'k lksj dksj dksjk dksjh dksl 'ksj 'kd dk'k ;'k jk'kh jk'kh dk'kh dk'kh 'kgj 'kgj 'kkd 'kkd 'kksd dkslh jks 'kh'kk",
   },
   {
     id: 7,
@@ -78,7 +78,7 @@ export const HINDI_LEARN_KEYS_LESSONS: HindiLesson[] = [
     focusHindi: 'ं क ह े ा र ि स य',
     description: 'ककंकंक हंहहंहं कंकंकक हंहहंहं के के कें हें कंकर शंकर हंस कंस ...',
     content:
-      "ddaddad gaggaga dadadd gaggaga ds ds dsa gsa dadj 'adj gal dal jad jkadk fgalk dkalk gka gka ;gka lk;a dadadad flag ;gha ;gha dgha dgha dgha dsl dgka dgsa dgka galh dadadd gaggga dadadada gaggga ds ds ds gsa dadj 'ad gal dal jad jkadk fgalk dkalk gka gka ;gka lk;a dadadad flag ;gha ;gha dgha dgha dgha dsl dgka dgsa dgka galh",
+      "ddaddad gaggaga dadadd gaggaga ds ds dsa gsa dadj 'kadj gal dal jad jkadk fgalk dkalk gka gka ;gka lk;a dadadad flag ;gha ;gha dgha dgha dgha dsl dgka dgsa dgka galh dadadd gaggga dadadada gaggga ds ds ds gsa dadj 'kad gal dal jad jkadk fgalk dkalk gka gka ;gka lk;a dadadad flag ;gha ;gha dgha dgha dgha dsl dgka dgsa dgka galh",
   },
   {
     id: 8,
@@ -88,7 +88,7 @@ export const HINDI_LEARN_KEYS_LESSONS: HindiLesson[] = [
     focusHindi: 'कस सर हर कर यह किस सिर शीश राह हीरा सारा ...',
     description: 'कस सर हर कर यह किस सिर शीश राह हीरा सारा कार काश काक ...',
     content:
-      "dl lj gj dj ;g fdl flj 'h' jkg ghjk lkjk dkj dk' dkd gkl gkj ghj ghjk ;kj jkg dkgh dksjk gks' lkjh fjgk jkgh lkjh lgh dgh 'dj lksgj f'kdkj f'kdkjh dfgl dfg;s jfg;s jksfd;s lgk; lkfj dk lgkjk dgk",
+      "dl lj gj dj ;g fdl flj 'kh'k jkg ghjk lkjk dkj dk'k dkd gkl gkj ghj ghjk ;kj jkg dkgh dksjk gks'k lkjh fjgk jkgh lkjh lgh dgh 'kdj lksgj f'kdkj f'kdkjh dfgl dfg;s jfg;s jksfd;s lgk; lkfj dk lgkjk dgk",
   },
   {
     id: 9,
@@ -131,7 +131,7 @@ export const HINDI_LEARN_KEYS_LESSONS: HindiLesson[] = [
     description:
       'कैकैकैकै कैकैकैकै हैहैहैहै हैहैहैहै सैसैसैसे हेहै केकै हेहै सेसै येयै शेशै केकेकैकै कैकैकैकै कैकैकैकै हैहैहैहै सैसैसैसै यैयैयैयै केकेकेके कैकैकैकै हैहैहैहै शैशैशैशै ...',
     content:
-      "dSdSdSdS dSdSdSdS gSgSgSgS gSgSgSgS lSlSlSls gsgS dsdS gsgS lslS ;s;S 's'S dsdsdSdS dSdSdSdS dSdSdSdS gSgSgSgS lSlSlSlS ;S;S;S;S dsdsdsds dSdSdSdS gSgSgSgS 'S'S'S'S dsdsdsds dSdSdSdS gSgSgSgS lSlSlSls gsgS dsdS gsgS lslS ;s;S 's'S dsdsdSdS dSdSdSdS dSdSdSdS gSgSgSgS lSlSlSlS ;S;S;S;S 'S'S'S'S dSls gS lSj ''kkad dSj '\" '\" \"' \"' 's\" 's\" Hks\" ds' Hkk\"kk \"S \"S 'S 's\"S 's\"S \"s'S \"s'S",
+      "dSdSdSdS dSdSdSdS gSgSgSgS gSgSgSgS lSlSlSls gsgS dsdS gsgS lslS ;s;S 'ks'kS dsdsdSdS dSdSdSdS dSdSdSdS gSgSgSgS lSlSlSlS ;S;S;S;S dsdsdsds dSdSdSdS gSgSgSgS 'kS'kS'kS'kS dsdsdsds dSdSdSdS gSgSgSgS lSlSlSls gsgS dsdS gsgS lslS ;s;S 'ks'kS dsdsdSdS dSdSdSdS dSdSdSdS gSgSgSgS lSlSlSlS ;S;S;S;S 'kS'kS'kS'kS dSls gS lSj 'k'kkad dSj 'k\"k 'k\"k \"k'k \"k'k 'ks\"k 'ks\"k Hks\"k ds'k Hkk\"kk \"kS \"kS 'kS 'ks\"kS 'ks\"kS \"ks'kS \"ks'kS",
   },
   {
     id: 13,
@@ -153,7 +153,7 @@ export const HINDI_LEARN_KEYS_LESSONS: HindiLesson[] = [
     description:
       'कभी शेर भी हारा था। सही के साथ सही कहां हो रहा है। शेष शासक कंस से कैसे हारे थे। रूस के साथ हो रहा है। हरेक के साथ भी सहा है। रेशे से हाहाकार हो सके। ...',
     content:
-      "dHkh 'sj Hkh gkjk FkkA lgh ds lkFk lgh dgka gks jgk gSA 's\" 'kkld dal ls dSls gkjs FksA :l ds lkFk gks jgk gSA gjsd ds lkFk Hkh lgk gSA js's ls gkgkdkj gks ldsA Hkh Fkh dS : fG Js; jFk ;Fkk dFkk dks\" gkFk Kkl Fkkg Fkk: ;K :l dkL; Hkk\"; gkL; L;kg 'kL; jLlh Jhlj Ddk Ddh gDdk gfFk;k fdLlk L;kgh fdLls :fd;s Hkfj;s Hkksjgs Js;l Kkld dGsh dGs'kh dGsg fdlds dj HkjA",
+      "dHkh 'ksj Hkh gkjk FkkA lgh ds lkFk lgh dgka gks jgk gSA 'ks\"k 'kkld dal ls dSls gkjs FksA :l ds lkFk gks jgk gSA gjsd ds lkFk Hkh lgk gSA js'ks ls gkgkdkj gks ldsA Hkh Fkh dS : fG Js; jFk ;Fkk dFkk dks\" gkFk Kkl Fkkg Fkk: ;K :l dkL; Hkk\"; gkL; L;kg 'kL; jLlh Jhlj Ddk Ddh gDdk gfFk;k fdLlk L;kgh fdLls :fd;s Hkfj;s Hkksjgs Js;l Kkld dGsh dGs'kh dGsg fdlds dj HkjA",
   },
   {
     id: 15,
@@ -164,7 +164,7 @@ export const HINDI_LEARN_KEYS_LESSONS: HindiLesson[] = [
     description:
       'कुकुकुकु कुकुकुकु सुसुसुसु युयुयुयु कूकूकूकू कूकूकूकू सूसूसूसू यूयूयूयू कुकू सुसू युयू शुशू शुशुशुशु शूशूशूशू कूकूकूक कुकुकुकु कुकुकुकु कुकुकुकु ...',
     content:
-      "dqdqdqdq dqdqdqdq lqlqlqlq ;q;q;q;q dwdwdwdw dwdwdwdw lwlwlwlw ;w;w;w;w dqdw lqlw ;q;w 'q'w 'q'q'q'q 'w'w'w'w dwdwdwd dqdqdqdq dqdqdqdq dqdqdqdq lqlqlqlq ;q;q;q;q dwdwdwdw dwdwdwdw lwlwlwlw ;w;w;w;w dqdw lqlw ;q;w 'q'w 'q'q'q'q 'w'w'w'+ dwdwdwdw dqdqdqdq dq' 'q\"d gwj ;w ;w 'wj lqj lqj 'wj Fkwd 'qd 'kq: Hkw Hkw Hkw 'kqHk lqFkjk gqDdk gd gdwd dwdj 'kqHk lqJh dq' jklqdk",
+      "dqdqdqdq dqdqdqdq lqlqlqlq ;q;q;q;q dwdwdwdw dwdwdwdw lwlwlwlw ;w;w;w;w dqdw lqlw ;q;w 'kq'kw 'kq'kq'kq'kq 'kw'kw'kw'kw dwdwdwd dqdqdqdq dqdqdqdq dqdqdqdq lqlqlqlq ;q;q;q;q dwdwdwdw dwdwdwdw lwlwlwlw ;w;w;w;w dqdw lqlw ;q;w 'kq'kw 'kq'kq'kq'kq 'kw'kw'kw'kw dwdwdwdw dqdqdqdq dq'k 'kq\"d gwj ;w ;w 'kwj lqj lqj 'kwj Fkwd 'kqd 'kq: Hkw Hkw Hkw 'kqHk lqFkjk gqDdk gd gdwd dwdj 'kqHk lqJh dq'k jklqdk",
   },
   {
     id: 16,
@@ -175,7 +175,7 @@ export const HINDI_LEARN_KEYS_LESSONS: HindiLesson[] = [
     description:
       'कककक मममम ककक ममम कम कम कम मक मक मक ffff तततत ffff तततत तितितिति तितितिति हहहह जजजज हहहह जजजज हजहज हजहज जहजह जहजह ...',
     content:
-      "dddd eeee ddd eee de de de ed ed ed ffff rrrr ffff rrrr frfrfrfr frfrfrfr gggg tttt gggg tttt gtgt gtgt tgtg tgtg frfrfrfr gtgtgtgt dededede eeee rrrr tttt eeee rrrr tttt eeee rrrr tttt eeee rrrr tttt ert ert ert ert tre tre te et re re er er re er er tr tr rt rt et te te re efr frfej edj rkjd rkjk rkfjdk rkd djrk djrh tgka tete ets etk tke tkfr tkrd gLrh gSfl;r fl;klr fl;klh dkt dkth tkdj gkjadj twrk eqdj ewd rqDdk jktw tksdj tks' thr fefr eqag ge gktfj",
+      "dddd eeee ddd eee de de de ed ed ed ffff rrrr ffff rrrr frfrfrfr frfrfrfr gggg tttt gggg tttt gtgt gtgt tgtg tgtg frfrfrfr gtgtgtgt dededede eeee rrrr tttt eeee rrrr tttt eeee rrrr tttt eeee rrrr tttt ert ert ert ert tre tre te et re re er er re er er tr tr rt rt et te te re efr frfej edj rkjd rkjk rkfjdk rkd djrk djrh tgka tete ets etk tke tkfr tkrd gLrh gSfl;r fl;klr fl;klh dkt dkth tkdj gkjadj twrk eqdj ewd rqDdk jktw tksdj tks'k thr fefr eqag ge gktfj",
   },
   {
     id: 17,
@@ -186,7 +186,7 @@ export const HINDI_LEARN_KEYS_LESSONS: HindiLesson[] = [
     description:
       'हहहह लललल हहहह लललल हलहल हलहल हलहल लहलह लहलह लहलह हजहल हजहल जल जल लज जल लज लज हजल हलज हजल हलजह हहहह लललल लू कालू जाली कली भला लाभ भालू लंका लंकेश लाल लोकलाज करिश्मा शालू',
     content:
-      "gggg yyyy gggg yyyy gygy gygy gygy ygyg ygyg ygyg gtgy gtgy ty ty yt ty yt yt gty gyt gty gytg gggg yyyy yw dkyw tkyh dyh Hkyk ykHk Hkkyw yadk yadks' yky yksdykt dfj'ek 'kkyw",
+      "gggg yyyy gggg yyyy gygy gygy gygy ygyg ygyg ygyg gtgy gtgy ty ty yt ty yt yt gty gyt gty gytg gggg yyyy yw dkyw tkyh dyh Hkyk ykHk Hkkyw yadk yadks'k yky yksdykt dfj'ek 'kkyw",
   },
   {
     id: 18,
@@ -219,7 +219,7 @@ export const HINDI_LEARN_KEYS_LESSONS: HindiLesson[] = [
     description:
       "'''' [[[[ '''' [[[[ ''[[ [['' ''[[ [['' 'k[k [k'k 'k[k [k[k[k[k 'k'k'k'k 'k'k[k[k [k[k'k'k 'ka[k खचाखच चख रख खरी खीर खुला खेल खैर खैरियत खुश शाख खास खान नखरा खाली खुले खोला '''' ]]]] ']']'] [][][][] ]]]] [[[[ [k] ]]]] [[[[ ]]]] '[] '[] ']'] '['[ ['[' ']'] ']'] ]]]] '''' [[[[ [k]'k] 'k][k] सुखा, हुक्का, खून, खोखला, शाख, शुखा",
     content:
-      "'''' [[[[ '''' [[[[ ''[[ [['' ''[[ [['' 'k[k [k'k 'k[k [k[k[k[k 'k'k'k'k 'k'k[k[k [k[k'k'k 'ka[k [kpk[kp p[k j[k [kjh [khj [kqyk [ksy [kSj [kSfj;r [kq' 'kk[k [kkl [kku u[kjk [kkyh [kqys [kksyk '''' ]]]] ']']'] [][][][] ]]]] [[[[ [k] ]]]] [[[[ ]]]] '[] '[] ']'] '['[ ['[' ']'] ']'] ]]]] '''' [[[[ [k]'k] 'k][k] lq[kk] gqDdk] [kwu] [kks[kyk] 'kk[k] 'kq[kk]",
+      "'''' [[[[ ''[[ [['' ''[[ [['' 'k[k [k'k 'k[k [k[k[k[k 'k'k'k'k 'k'k[k[k [k[k'k'k 'ka[k [kpk[kp p[k j[k [kjh [khj [kqyk [ksy [kSj [kSfj;r [kq'k 'kk[k [kkl [kku u[kjk [kkyh [kqys [kksyk '''' ]]]] ']']'] [][][][] ]]]] [[[[ [k] ]]]] [[[[ ]]]] '[] '[] ']'] '['[ ['[' ']'] ']'] ]]]] '''' [[[[ [k]'k] 'k][k] lq[kk] gqDdk] [kwu] [kks[kyk] 'kk[k] 'kq[kk]",
   },
   {
     id: 21,
@@ -268,140 +268,145 @@ export const HINDI_LEARN_KEYS_LESSONS: HindiLesson[] = [
   {
     id: 25,
     title: 'Exercise 25',
-    category: 'Anusvara & Chandrabindu',
-    focusKeys: 'a W',
-    focusHindi: 'ं ॅ',
-    description: 'Nasal sounds: Anusvara (ं=a) and Chandrabindu (ॅ=W) practice',
+    category: 'Half Ja & Half La Keys (ज्=T, ल्=Y, भला, भल्लाल, कुल्ला, खुल्ला, कल्ला)',
+    focusKeys: 't T y Y g H k d q [ p s',
+    focusHindi: 'ज ज् ल ल् ह भ ा क ु ख् च े',
+    description:
+      'जजजजज TTTT TtTt ttTT TTTT TTTT Ttoy yyyy YYYY लललल YyYyYy yY YYYY yyyy लललल हहहह लललल हहहह YYYY हहहह YYYY लललल  YYYY लललल  YYYY लललल भला भल्लाल कुल्ला खुल्ला कल्ला कुल्चे चुल्हा जजजज TTTT जजजजज TTTT TtTt ttTT TTTT TTTT Ttoy yyyy YYYY लललल YyYyYy yY YYYY yyyy लललल हहहह लललल हहहह YYYY हहहह YYYY लललल  YYYY लललल  YYYY लललल भला भल्लाल कुल्ला खुल्ला कल्ला कुल्चे चुल्हा जजजज TTTT',
     content:
-      'da dW fa fW ga gW ja jW la lW da dW fa fW ga gW ja jW la lW da dW fa fW ga gW ja jW la lW da dW fa fW ga gW ja jW la lW da dW fa fW ga gW ja jW la lW da dW fa fW ga gW ja jW la lW da dW fa fW ga gW ja jW la lW',
+      'ttttt TTTT TtTt ttTT TTTT TTTT Ttoy yyyy YYYY yyyy YyYyYy yY YYYY yyyy yyyy gggg yyyy gggg YYYY gggg YYYY yyyy YYYY yyyy YYYY yyyy Hkkyk HkYyky dqYyk [kqYyk dYyk dqYps pqYgk tttt TTTT ttttt TTTT TtTt ttTT TTTT TTTT Ttoy yyyy YYYY yyyy YyYyYy yY YYYY yyyy yyyy gggg yyyy gggg YYYY gggg YYYY yyyy YYYY yyyy YYYY yyyy Hkkyk HkYyky dqYyk [kqYyk dYyk dqYps pqYgk tttt TTTT',
   },
   {
     id: 26,
     title: 'Exercise 26',
-    category: 'Reph & Paden R',
-    focusKeys: 'Z j',
-    focusHindi: 'र् र',
-    description: 'Flying Reph (र्=Z) over letters and standard Ra combinations',
+    category: 'Half Na & Half Pa Keys (न्=U, प्=I, कान्हा, तन्हा, मुन्ना, जन्म, पाप्पा)',
+    focusKeys: 'u U d k g r e a l f t i I p q S h',
+    focusHindi: 'न न् क ा ह त म ं स ि ज प प् च ु ै ी',
+    description:
+      'uननन UUUU नननन UUUU uUuU UUUU uU uU Uu Uu कान्हा तन्हा मुUuk मुUuh जन्म कान्स जन्म जन्मांतर सन्तरा किUuw जिUuk मUuq पपपप IIII पपपप IIII पपपप IIII IiIi IiIi पाप्प पप्पा कनप्पा समाप्त सुप्त हैप्पी',
     content:
-      'dZ fZ gZ jZ lZ eZ rZ tZ yZ uZ dZ fZ gZ jZ lZ eZ rZ tZ yZ uZ dZ fZ gZ jZ lZ eZ rZ tZ yZ uZ dZ fZ gZ jZ lZ eZ rZ tZ yZ uZ dZ fZ gZ jZ lZ eZ rZ tZ yZ uZ dZ fZ gZ jZ lZ eZ rZ tZ yZ uZ dZ fZ gZ jZ lZ eZ rZ tZ yZ uZ',
+      'uuuu UUUU uuuu UUUU uUuU UUUU uU uU Uu Uu dkUgk rUgk eqUuk eqUuh tUe dkUl tUe tUekarj lUrjk fdUuw ftUuk eUuq iiii IIII iiii IIII iiii IIII IiIi IiIi ikIi iIik duiIk lekIr lqIr gSIih',
   },
   {
     id: 27,
     title: 'Exercise 27',
-    category: 'Half Letters (Halant)',
-    focusKeys: 'D F E R T Y U I O P L',
-    focusHindi: 'क् थ् म् त् ज् ल् न् प् व् च् स्',
-    description: 'Essential half letters typed with Shift on consonant keys',
+    category: 'Half Letters Synthesis (ज्=T, ल्=Y, न्=U, प्=I, त्=R, म्=E, स्=L)',
+    focusKeys: 'T Y U I R E L t y u i r e l',
+    focusHindi: 'ज् ल् न् प् त् म् स् ज ल न प त म स',
+    description:
+      'TTTT YYYY UUUU IIII RRRR EEEE LLLL त् ज् ल् न् प् म् स् बच्चा सच्चा दिल्ली कान्हा समाप्त कुत्ता',
     content:
-      'D F E R T Y U I O P L D F E R T Y U I O P L D F E R T Y U I O P L D F E R T Y U I O P L D F E R T Y U I O P L D F E R T Y U I O P L D F E R T Y U I O P L D F E R T Y U I O P L D F E R T Y U I O P L D F E R',
+      'TTTT YYYY UUUU IIII RRRR EEEE LLLL tttt yyyy uuuu iiii rrrr eeee llll LFkku cPpk iRrk lPpk fnYyh jkLrk iqLrd dkUgk lekIr dqRrk TTTT YYYY UUUU IIII RRRR EEEE LLLL tttt yyyy uuuu iiii rrrr eeee llll LFkku cPpk iRrk lPpk fnYyh jkLrk iqLrd dkUgk lekIr dqRrk',
   },
   {
     id: 28,
     title: 'Exercise 28',
-    category: 'Words with Half Letters',
-    focusKeys: 'Mixed Shift & direct',
-    focusHindi: 'स्थान बच्चा पत्ता सच्चा दिल्ली रास्ता पुस्तक मित्र',
-    description: 'Frequent Hindi words featuring double & half letters',
+    category: 'Half Va & Half Cha Keys (व्=O, च्=P, कव्वाली, ज्वार, कच्चा, वाच्य, सच्चा)',
+    focusKeys: 'o O l d k y e u T g V p P ; t h',
+    focusHindi: 'व व् स क ा ल म न ज् ह ट च च् य ज ी',
+    description:
+      'वववव OOOO वववव OOOO ववOO OO oo वव सव सव सOO OO ooOO OoOoOoOo कव्वाली व्वल वाल मनोव्वल ज्वार व्हाट चचचच PPPP चचचच PPPP चचचच PPPP चचच्च चचPP PPpp चच्चP यच्यच यच्यच चच्चा कच्चा वाच्य च्यवन सच्चा जच्चा वचन सच्ची हच्चा वववव OOOO वववव OOOO ववOO OO oo वव सव सव सOO OO ooOO OoOoOoOo कव्वाली व्वल वाल मनोव्वल ज्वार व्हाट चचचच PPPP चचचच PPPP चचचच PPPP चचच्च चचPP PPpp चच्चP यच्यच यच्यच चच्चा कच्चा वाच्य च्यवन सच्चा जच्चा वचन सच्ची हच्चा',
     content:
-      'LFkku cPpk iRrk lPpk fnYyh jkLrk iqLrd fe= LFkku cPpk iRrk lPpk fnYyh jkLrk iqLrd fe= LFkku cPpk iRrk lPpk fnYyh jkLrk iqLrd fe= LFkku cPpk iRrk lPpk fnYyh jkLrk iqLrd fe= LFkku cPpk iRrk lPpk fnYyh jkLrk iqLrd fe=',
+      'oooo OOOO oooo OOOO ooOO OO oo oo lo lo lOO OO ooOO OoOoOoOo dOokyh Ooy oky euksOoy Tokj OgkV pppp PPPP pppp PPPP pppp PPPP ppPp ppPP PPpp ppPpP ;P;p ;P;p pPpk dPpk okP; P;ou lPpk tPpk opu lPph gPpk oooo OOOO oooo OOOO ooOO OO oo oo lo lo lOO OO ooOO OoOoOoOo dOokyh Ooy oky euksOoy Tokj OgkV pppp PPPP pppp PPPP pppp PPPP ppPp ppPP PPpp ppPpP ;P;p ;P;p pPpk dPpk okP; P;ou lPpk tPpk opu lPph gPpk',
   },
   {
     id: 29,
     title: 'Exercise 29',
-    category: 'Simple Short Sentences',
-    focusKeys: 'Full keyboard',
-    focusHindi: 'यह एक अच्छा दिन है। राम घर जाता है। सीता गाना गाती है।',
-    description: 'Basic sentence typing with Purna Viram (| / .)',
+    category: 'Kha, Half Ksha & Dv Keys (ख=[, क्ष्={, द्व=}, रक्षा, क्षमा, द्वार, द्वीप)',
+    focusKeys: "[ { ' k j d H e E r s f p q ] } i \" t S",
+    focusHindi: 'ख् क्ष् श ा र क भ म म् त े ि च ु , द्व प ष् ज ै',
+    description:
+      "[[[[ {{{{ [[[[ {{{{ [[[[ {{{{ [{[{[{ '{'{'{ क्षक्षक्षक्ष क्षखक्षख क्षखखक्ष क्षक्षखक्ष क्षक्षक्षक्ष क्षखक्षख क्षखखक्ष क्षक्षखक्ष क्षीर क्षार रक्षा रक्षक भक्षक क्षमा क्षम्य क्षमता क्षेक्षेक्षे शिक्षा साक्षर शिक्षित चक्षु परीक्षा भिक्षा ]]]] }}}} ]]]] }}}} ]]]] }}}} ]]}} }}]] }}}} '''' }}}} द्वार द्वार द्वन्द्व द्वापर द्वीप द्वारिका महाद्वीप द्वितीय द्वेष द्विज द्वैत द्विपक्षीय द्विभुज",
     content:
-      ';g ,d vPNk fnu gSA jke ?kj tkrk gSA lhrk xkuk xkrh gSA ;g ,d vPNk fnu gSA jke ?kj tkrk gSA lhrk xkuk xkrh gSA ;g ,d vPNk fnu gSA jke ?kj tkrk gSA lhrk xkuk xkrh gSA ;g ,d vPNk fnu gSA jke ?kj tkrk gSA lhrk xkuk xkrh gSA',
+      "[[[[ {{{{ [[[[ {{{{ [[[[ {{{{ [{[{[{ '{'{'{ {k{k{k{k {k[k{k[k {k[k[k{k {k{k[k{k {k{k{k{k {k[k{k[k {k[k[k{k {k{k[k{k {khj {kkj j{kk j{kd Hk{kd {kek {kE; {kerk {ks{ks{ks f'k{kk lk{kj f'kf{kr p{kq ijh{kk fHk{kk ]]]] }}}} ]]]] }}}} ]]]] }}}} ]]}} }}]] }}}} '''' }}}} }kj }kj }U} }kij }hi }kfjdk egk}hi f}rh; }s\"k f}t }Sr f}i{kh; f}Hkqt",
   },
   {
     id: 30,
     title: 'Exercise 30',
-    category: 'Sentence Flow & Speed',
-    focusKeys: 'Full keyboard',
-    focusHindi: 'सत्य की हमेशा जीत होती है। परिश्रम ही सफलता की कुंजी है।',
-    description: 'Inspiring Hindi proverbs and speed continuity practice',
+    category: 'D-ya Key (द्य=|, विद्यालय, विद्या, द्योतक, पद्य, गद्य, पद्यांश)',
+    focusKeys: "\\ | ? ' k f o y ; s r d i x a e l q E",
+    focusHindi: 'द्य श ा ि व ल य े त क प ग ं म स ु म्',
+    description:
+      "???? द्यद्यद्यद्य ?? द्यद्यद्यद्य ?? द्यद्यद्यद्य ||\\\\ |\\|\\|\\ \\|| ||\\ \\|| ||\\ 'k| 'k| द्यद्यद्यद्य द्यद्यद्यद्य fo|ky; fo|k द्योतक पद्य द्यद्यद्यद्य गद्य पद्यांश गद्यांश विद्यमान l|qEu |qfr ???? द्यद्यद्यद्य ?? द्यद्यद्यद्य ?? द्यद्यद्यद्य ||\\\\ |\\|\\|\\ \\|| ||\\ \\|| ||\\ 'k| 'k| द्यद्यद्यद्य द्यद्यद्यद्य fo|ky; fo|k द्योतक पद्य द्यद्यद्यद्य गद्य पद्यांश गद्यांश विद्यमान l|qEu |qfr",
     content:
-      'lR; dh ges' +
-      "'" +
-      'kk thr gksrh gSA ifjJe gh lQyrk dh dqaith gSA lR; dh ges' +
-      "'" +
-      'kk thr gksrh gSA ifjJe gh lQyrk dh dqaith gSA lR; dh ges' +
-      "'" +
-      'kk thr gksrh gSA ifjJe gh lQyrk dh dqaith gSA lR; dh ges' +
-      "'" +
-      'kk thr gksrh gSA ifjJe gh lQyrk dh dqaith gSA',
+      "???? |||| ?? |||| ?? |||| ||\\\\ |\\|\\|\\ \\|| ||\\ \\|| ||\\ 'k| 'k| |||| |||| fo|ky; fo|k |ksrd i| |||| x| i|ka'k x|ka'k fo|eku l|qEu |qfr ???? |||| ?? |||| ?? |||| ||\\\\ |\\|\\|\\ \\|| ||\\ \\|| ||\\ 'k| 'k| |||| |||| fo|ky; fo|k |ksrd i| |||| x| i|ka'k x|ka'k fo|eku l|qEu |qfr",
   },
   {
     id: 31,
     title: 'Exercise 31',
-    category: 'Advanced Key Combos 1',
-    focusKeys: 'd k h j g f s a',
-    focusHindi: 'क का कि की कु कू के कै कं कह',
-    description: 'All 10 matras on the root letter Ka (क)',
+    category: 'Comprehensive Matras & Speed Drill (क से कौ, कंकं, राम, सुश्री, द्वितीय)',
+    focusKeys: "d k f h q w s S o a g j l ; ' \" F H : Q e R T y u i",
+    focusHindi: 'क ा ि ी ु ू े ै ो ं ह र स य श ष् थ भ रू फ म त् ज् ल न प',
+    description:
+      'कक काका किकि कीकी कुकु कूकू केके कैकै कोको कौकौ कंकं ही राम सात सरल यहां शाम पुष्प हक्का था भाभी सुश्री रस्सा जस्सी रूस रूह फुल फूफा फॉल मम्मी तांत्या राज्य जाज्य लल्ला जननी जन्म पाश जाप्ता कव्वाली कवि चच्चा जांच खाम क्षमा द्वितीय द्वद्वद्व ?? ?? द्यद्य द्यद्य कक्का भस्म हिंसा कभी सभी यम शक शशांक पुष्कर पुष्प ज्ञात विज्ञाu',
     content:
-      'd dk fjd dh dq dw ds dS da dg d dk fjd dh dq dw ds dS da dg d dk fjd dh dq dw ds dS da dg d dk fjd dh dq dw ds dS da dg d dk fjd dh dq dw ds dS da dg d dk fjd dh dq dw ds dS da dg d dk fjd dh dq dw ds dS da dg',
+      "dd dkdk fdfd dhdh dqdq dwdw dsds dSdS dksdks dkSdkS dada gh jke lkr ljy ;gka 'kke iq\"i gDdk Fkk HkkHkh lqJh jLlk tLlh :l :g Qqy QwQk QkWy eEeh rkaR;k jkT; tkT; yYyk tuuh tUe ik'k tkIrk dOokyh dfo pPpk tkap [kke {kek f}rh; }}} ?? ?? || || dDdk HkLe fgalk dHkh lHkh ;e 'kd 'k'kkad iq\"dj iq\"i Kkr foKku",
   },
   {
     id: 32,
     title: 'Exercise 32',
-    category: 'Advanced Key Combos 2',
-    focusKeys: 'x k h j g f s a',
-    focusHindi: 'ग गा गि गी गु गू गे गै गं गह',
-    description: 'All 10 matras on the root letter Ga (ग)',
+    category: 'Advanced Compound & Conjunct Words (कक्षा, क्षमा, पक्षी, वत्स, मुल्ला)',
+    focusKeys: "d { k h o R l e q Y p t ; w W ' a Q } I i [ r S g",
+    focusHindi: 'क क्ष् ा ी व त् स म ु ल् च ज य ू ॅ श ं फ द्व प् प ख् त ै ह',
+    description:
+      'कक्षा क्षमा पक्षी वत्स मुल्ला मम्मी चच्चा जुल्म सत्य म्यान सत्या वूलन वॉमन शरीक म्यायूँ म्यानी फल द्वारा प्यासी प्लॉवर पॉवर पुख्ता कैम्पस पख्तून पतलून सप्ताह व्यवहार व्यवहारी साप्ताहिक साहसिक वामनजी सैम्पूक कैम्पलॉन साहित्य साहित्यिक सामाजिक कम्मलुम हम्मीर हम्मारिश फॉल द्वितीय द्वापर फलस्वरूप',
     content:
-      'x xk fJx xh xq xw xs xS xa xg x xk fJx xh xq xw xs xS xa xg x xk fJx xh xq xw xs xS xa xg x xk fJx xh xq xw xs xS xa xg x xk fJx xh xq xw xs xS xa xg x xk fJx xh xq xw xs xS xa xg x xk fJx xh xq xw xs xS xa xg',
+      "d{kk {kek i{kh oRl eqYyk eEeh pPpk tqYe lR; E;ku lR;k owyu okWeu 'kjhd E;k;wa E;kuh Qy }kjk I;klh IykWoj ikWoj iq[rk dSEil i[rwu irywu lIrkg O;ogkj O;ogkjh lkIrkfgd lkfgld okeuth lSEiwd dSEiykWu lkfgR; lkfgfR;d lkekftd dEeyqe gEehj gEekfj'k QkWy f}rh; }kij QyLo:i",
   },
   {
     id: 33,
     title: 'Exercise 33',
-    category: 'Advanced Key Combos 3',
-    focusKeys: 'c k h j g f s a',
-    focusHindi: 'ब बा बि बी बु बू बे बै बं बह',
-    description: 'All 10 matras on the root letter Ba (ब)',
+    category: 'Complex Sentences with Special Characters (यह तो मैंने कभी सोचा ही नहीं था)',
+    focusKeys: "; g r k s e S d H h l p F f q Y o t u i c } D",
+    focusHindi: 'य ह त ा े म ै क भ ी स च थ ि ु ल् व ज न प ब द्व क्',
+    description:
+      'यह तो मैंने कभी सोचा ही नहीं था। हर किसी में कुल मिलाकर मां वाली वो ममता नहीं होती है। भालू लल्ला, मुUuk व सज्जन को खा नहीं सका। पापा व काव्या चच्चा कल तक कूच करें। तत्परता में मम्मी भूखी ही सोयी। फालतू के काम करवा लो चाहे जितने? कच्चा, चुज्जा, तव्वल? द्वार व द्वीप भी ना हों तो फिर क्या हों? विद्या हर किसी की रक्षा करती है। थावरजी ही मानते हों तो मान जायें, मैं तो किसी से ना मानूं। मैं जवान नहीं हूं वरना यह जरूर करता।',
     content:
-      'c ck fJc ch cq cw cs cS ca cg c ck fJc ch cq cw cs cS ca cg c ck fJc ch cq cw cs cS ca cg c ck fJc ch cq cw cs cS ca cg c ck fJc ch cq cw cs cS ca cg c ck fJc ch cq cw cs cS ca cg c ck fJc ch cq cw cs cS ca cg',
+      ";g rks eSus dHkh lkspk gh ugha FkkA gj fdlh esa dqy feykdj eka okyh oks kerk ugha gksrh gSA Hkkyw yYyk] eqUuk o lTtu dks [kk ugha ldkA ikik o dkO;k pPpk dy rd dwp djsaA rRijrk esa eEeh Hkw[kh gh lks;hA Qkyrw ds dke djok yks pkgs ftrus\\ dPpk] pqTtk] rOoy\\ }kj o }hi Hkh uk gksa rks fQj D;k gksa\\ fo|k gj fdlh dh j{kk djrh gSA Fkkojth gh ekurs gksa rks eku tk;sa] eSa rks fdlh ls uk ekuwaA eSa toku ugha gwa ojuk ;g t:j djrkA",
   },
   {
     id: 34,
     title: 'Exercise 34',
-    category: 'Advanced Key Combos 4',
-    focusKeys: 'e k h j g f s a',
-    focusHindi: 'म मा मि मी मु मू मे मै मं मह',
-    description: 'All 10 matras on the root letter Ma (म)',
+    category: 'Paden Ra & Samyukt Vyanjan (प्र=iz, म्र=ez, स्र=lz, प्रकार, प्रतिभा, प्रतिज्ञा)',
+    focusKeys: "l z i e t o k s r H d w c x ' g h",
+    focusHindi: 'स ्र प म ज व ा े त भ क ू ब ग श ह ी',
+    description:
+      "lzlzlzlz प्रप्रप्रप्र म्रम्रम्रम्र tztztztz वजz सzksत भ्रम de प्रकार प्रतिभा प्रतिज्ञा  कूर भ्रून सब्र ताम्र गगगग गेगेगेगे जगजगजग गज गज lzlzlzl lzlzlzlz प्रप्रप्रप्र म्रम्रम्रम्र tztztztz वजz सzksत भ्रम de प्रकार प्रतिभा प्रतिज्ञा  कूर भ्रून सब्र ताम्र गगगग गेगेगेगे जगजगजग गज गज lzlzlzl ग्रह ग्राही ग्राहक व्याग्र चक्र तक ग्रीवा ग्रीक ग्राम ग्रोवर 'kz'kz'kz'kz",
     content:
-      'e ek fJe eh eq ew es eS ea eg e ek fJe eh eq ew es eS ea eg e ek fJe eh eq ew es eS ea eg e ek fJe eh eq ew es eS ea eg e ek fJe eh eq ew es eS ea eg e ek fJe eh eq ew es eS ea eg e ek fJe eh eq ew es eS ea eg',
+      "lzlzlzlz iziziziz ezerezerez tztztztz otz lzksr Hkze de izdkj izfrHkk izfrKk dwj Hkzwu lcz rkez xxxx xsxsxsxs txtxtx xt xt lzlzlzl lzlzlzlz iziziziz ezerezerez tztztztz otz lzksr Hkze de izdkj izfrHkk izfrKk dwj Hkzwu lcz rkez xxxx xsxsxsxs txtxtx xt xt lzlzlzl xzg xzkgh xzkgd O;kxz pdz rd xzhook xzhd xzke xzksoj 'kz'kz'kz'kz",
   },
   {
     id: 35,
     title: 'Exercise 35',
-    category: 'Advanced Key Combos 5',
-    focusKeys: 'r k h j g f s a',
-    focusHindi: 'त ता ति ती तु तू ते तै तं तह',
-    description: 'All 10 matras on the root letter Ta (त)',
+    category: 'Vowel Aa & Ba Keys (अ=v, आ=vk, ब=c, अम्मी, अविकारी, अभिभावक, बकरी)',
+    focusKeys: 'f v k E e o d j h H l Q w t S c z',
+    focusHindi: 'ि अ ा म् म व क र ी भ स फ ू ज ै ब ्र',
+    description:
+      'ffff अअअअ ffff अअअअ अअअअ आआआ अअ आआ अआ आअ अम्मी अविकारी अभिभावक अभिसार आलम आफरीन आलू जाओ ओर और औरत गौरव कककक बबबब कककक बबबब कबकब कबकब बकबक बकरी कबीर कबाब कब्र ब्रोकर बला बाबा चाबी बीरबल कककक बबबब कककक बबबब कबकब कबकब बकबक बकरी कबीर कबाब कब्र ब्रोकर बला बाबा चाबी बीरबल सब्र',
     content:
-      'r rk fJr rh rq rw rs rS ra rg r rk fJr rh rq rw rs rS ra rg r rk fJr rh rq rw rs rS ra rg r rk fJr rh rq rw rs rS ra rg r rk fJr rh rq rw rs rS ra rg r rk fJr rh rq rw rs rS ra rg r rk fJr rh rq rw rs rS ra rg',
+      'ffff vvvv ffff vvvv vvvv vkvkvk vv vkvk vvk vkv vEeh vforkjh vfHkHkkod vfHklkj vkye vkQjhu vkyw tkvks vksj vkSj vkSjr xkSjo dddd cccc dddd cccc dcdc dcdc cdcd cdjh dchj dckc dcz czksdj cyk ckck pkch chjcy dddd cccc dddd cccc dcdc dcdc cdcd cdjh dchj dckc dcz czksdj cyk ckck pkch chjcy lcz',
   },
   {
     id: 36,
     title: 'Exercise 36',
-    category: 'Advanced Key Combos 6',
-    focusKeys: 't k h j g f s a',
-    focusHindi: 'ज जा जि जी जु जू जे जै जं जह',
-    description: 'All 10 matras on the root letter Ja (ज)',
+    category: 'Vowel I & Da Keys (इ=b, द=n, इंकार, इमली, इंसान, इतिहास, दरवाजा, दुल्हन)',
+    focusKeys: 'g b a d k j e y p l f r t Q T n M o q w Y S v i z',
+    focusHindi: 'ह इ ं क ा र म ल च स ि त ज फ ज् द ड व ु ू ल् ै अ प ्र',
+    description:
+      'हहहह इइइइ हहहह इइइइ हहइइ इइहह इ्हह हइहइ इहइह इक इंकार इमली इलायची इंसान इतिहास इंतजार इजहार इंजन इकरार इंसाफ इज्जत इलाका इकबाल इलाज इशारा हहहह दददद हहहह दददद हहहह दददद हदहद हदहद दहदह हइद हइद हडहद हडहद दहक दिन दिल चांद बाद गंदा बंदा हद दही कद दरवाजा दम दुम दूरी दुल्हन दौलत दोबारा अदा आदान प्रदान प्रदीप',
     content:
-      't tk fJt th tq tw ts tS ta tg t tk fJt th tq tw ts tS ta tg t tk fJt th tq tw ts tS ta tg t tk fJt th tq tw ts tS ta tg t tk fJt th tq tw ts tS ta tg t tk fJt th tq tw ts tS ta tg t tk fJt th tq tw ts tS ta tg',
+      "gggg bbbb gggg bbbb ggbb bbgg bZgg gbgb bgbg bd badkj beyh byk;ph balku bfrgkl bartkj btgkj batu bdjkj balkQ bTtr bykdk bdcky bykt b'kkjk gggg nnnn gggg nnnn gggg nnnn gngn gngn ngng gbn gbn gMgn gMgn ngd fnu fny pkan ckn xank cank gn ngh dn njoktk ne nqe nwjh nqYgu nkSyr nksckjk vnk vknku iznku iznhi",
   },
   {
     id: 37,
     title: 'Exercise 37',
-    category: 'Advanced Key Combos 7',
-    focusKeys: 'y k h j g f s a',
-    focusHindi: 'ल ला लि ली लु लू ले लै लं लह',
-    description: 'All 10 matras on the root letter La (ल)',
+    category: 'Vowels U & E Keys (उ=m, ए=,, उच्च, उपकार, उल्लास, उज्जवल, एक, ऐनक)',
+    focusKeys: 'k m P p i d j Y y T t o U u h l g a e z E n , S x v H',
+    focusHindi: 'ा उ च् च प क र ल् ल ज् ज व न् न ी स ह ं म ्र म् द , ै ग अ भ',
+    description:
+      'kkkk उउउउ kkkk उउउउ kkkk उउउउ kउkउ उाउा उाउाउ उच्च उपकार उल्लास उज्जवल उUuhस उनका उनकी उन्हें उल्हास उनका उनसे उम्र उम्मीद उंकार kkkk एएएए  kkkk एएएए kkkk एएएए kkkएएए kkएए एएkk kएाएए एाएा kउए kmkए kmkए kएkए एएkउ kmkए ऐक ऐनक एक गए आए जाए भाउ भाए बाएं दाएं ऐश एकता ऐजेंसी एरियर ऐलान',
     content:
-      'y yk fJy yh yq yw ys yS ya yg y yk fJy yh yq yw ys yS ya yg y yk fJy yh yq yw ys yS ya yg y yk fJy yh yq yw ys yS ya yg y yk fJy yh yq yw ys yS ya yg y yk fJy yh yq yw ys yS ya yg y yk fJy yh yq yw ys yS ya yg',
+      "kkkk mmmm kkkk mmmm kkkk mmmm kmkm mkmk mkmkm mPp eidkj mYykl mTtoy mUuhl eudk eudh mUgas mYgkl eudk euls mez mEehn eakdj kkkk ,,,, kkkk ,,,, kkkk ,,,, kkk,,, kk,, ,,kk k,k,, ,k,k km, kmk, kmk, k,k, ,,km kmk, ,Sd ,Sud ,d x, vk, tk, Hkkm Hkk, ck,a nk,a ,S'k ,drk ,Stsalh ,fj;j ,Syku",
   },
   {
     id: 38,

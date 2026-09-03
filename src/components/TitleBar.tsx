@@ -6,7 +6,7 @@ interface TitleBarProps {
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
-  title = 'Soni Typing Tutor 5.1.168',
+  title = 'Godara Typing Tutor 5.1.168',
 }) => {
   return (
     <div

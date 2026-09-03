@@ -110,6 +110,89 @@ export const KEYBOARD_ROWS = [
   ],
 ];
 
+export const INSCRIPT_KEYBOARD_ROWS = [
+  // Number row
+  [
+    { key: '`', labelTop: '~', labelBottom: '`', hindiTop: '', hindiBottom: '`', finger: 'left-pinky', width: 'w-10' },
+    { key: '1', labelTop: '!', labelBottom: '1', hindiTop: 'ऍ', hindiBottom: '१', finger: 'left-pinky', width: 'w-10' },
+    { key: '2', labelTop: '@', labelBottom: '2', hindiTop: 'ॅ', hindiBottom: '२', finger: 'left-ring', width: 'w-10' },
+    { key: '3', labelTop: '#', labelBottom: '3', hindiTop: '्र', hindiBottom: '३', finger: 'left-middle', width: 'w-10' },
+    { key: '4', labelTop: '$', labelBottom: '4', hindiTop: 'र्', hindiBottom: '४', finger: 'left-index', width: 'w-10' },
+    { key: '5', labelTop: '%', labelBottom: '5', hindiTop: 'ज्ञ', hindiBottom: '५', finger: 'left-index', width: 'w-10' },
+    { key: '6', labelTop: '^', labelBottom: '6', hindiTop: 'त्र', hindiBottom: '६', finger: 'right-index', width: 'w-10' },
+    { key: '7', labelTop: '&', labelBottom: '7', hindiTop: 'क्ष', hindiBottom: '७', finger: 'right-index', width: 'w-10' },
+    { key: '8', labelTop: '*', labelBottom: '8', hindiTop: 'श्र', hindiBottom: '८', finger: 'right-middle', width: 'w-10' },
+    { key: '9', labelTop: '(', labelBottom: '9', hindiTop: '(', hindiBottom: '९', finger: 'right-ring', width: 'w-10' },
+    { key: '0', labelTop: ')', labelBottom: '0', hindiTop: ')', hindiBottom: '०', finger: 'right-pinky', width: 'w-10' },
+    { key: '-', labelTop: '_', labelBottom: '-', hindiTop: 'ः', hindiBottom: '-', finger: 'right-pinky', width: 'w-10' },
+    { key: '=', labelTop: '+', labelBottom: '=', hindiTop: 'ऋ', hindiBottom: 'ृ', finger: 'right-pinky', width: 'w-10' },
+    { key: 'Backspace', labelTop: '', labelBottom: 'Backspace', isSpecial: true, finger: 'right-pinky', width: 'w-20' },
+  ],
+  // Top row (QWERTY)
+  [
+    { key: 'Tab', labelTop: '', labelBottom: 'tab', isSpecial: true, finger: 'left-pinky', width: 'w-14' },
+    { key: 'q', labelTop: 'Q', labelBottom: 'q', hindiTop: 'औ', hindiBottom: 'ौ', finger: 'left-pinky', width: 'w-10' },
+    { key: 'w', labelTop: 'W', labelBottom: 'w', hindiTop: 'ऐ', hindiBottom: 'ै', finger: 'left-ring', width: 'w-10' },
+    { key: 'e', labelTop: 'E', labelBottom: 'e', hindiTop: 'आ', hindiBottom: 'ा', finger: 'left-middle', width: 'w-10' },
+    { key: 'r', labelTop: 'R', labelBottom: 'r', hindiTop: 'ई', hindiBottom: 'ी', finger: 'left-index', width: 'w-10' },
+    { key: 't', labelTop: 'T', labelBottom: 't', hindiTop: 'ऊ', hindiBottom: 'ू', finger: 'left-index', width: 'w-10' },
+    { key: 'y', labelTop: 'Y', labelBottom: 'y', hindiTop: 'भ', hindiBottom: 'ब', finger: 'right-index', width: 'w-10' },
+    { key: 'u', labelTop: 'U', labelBottom: 'u', hindiTop: 'ङ', hindiBottom: 'ह', finger: 'right-index', width: 'w-10' },
+    { key: 'i', labelTop: 'I', labelBottom: 'i', hindiTop: 'घ', hindiBottom: 'ग', finger: 'right-middle', width: 'w-10' },
+    { key: 'o', labelTop: 'O', labelBottom: 'o', hindiTop: 'ध', hindiBottom: 'द', finger: 'right-ring', width: 'w-10' },
+    { key: 'p', labelTop: 'P', labelBottom: 'p', hindiTop: 'झ', hindiBottom: 'ज', finger: 'right-pinky', width: 'w-10' },
+    { key: '[', labelTop: '{', labelBottom: '[', hindiTop: 'ढ', hindiBottom: 'ड', finger: 'right-pinky', width: 'w-10' },
+    { key: ']', labelTop: '}', labelBottom: ']', hindiTop: 'ञ', hindiBottom: '़', finger: 'right-pinky', width: 'w-10' },
+    { key: '\\', labelTop: '|', labelBottom: '\\', hindiTop: 'ऑ', hindiBottom: 'ॉ', finger: 'right-pinky', width: 'w-10' },
+  ],
+  // Home row (ASDFGHJKL)
+  [
+    { key: 'CapsLock', labelTop: '', labelBottom: 'caps lock', isSpecial: true, finger: 'left-pinky', width: 'w-16' },
+    { key: 'a', labelTop: 'A', labelBottom: 'a', hindiTop: 'ओ', hindiBottom: 'ो', finger: 'left-pinky', width: 'w-10' },
+    { key: 's', labelTop: 'S', labelBottom: 's', hindiTop: 'ए', hindiBottom: 'े', finger: 'left-ring', width: 'w-10' },
+    { key: 'd', labelTop: 'D', labelBottom: 'd', hindiTop: 'अ', hindiBottom: '्', finger: 'left-middle', width: 'w-10' },
+    { key: 'f', labelTop: 'F', labelBottom: 'f', hindiTop: 'इ', hindiBottom: 'ि', finger: 'left-index', width: 'w-10' },
+    { key: 'g', labelTop: 'G', labelBottom: 'g', hindiTop: 'उ', hindiBottom: 'ु', finger: 'left-index', width: 'w-10' },
+    { key: 'h', labelTop: 'H', labelBottom: 'h', hindiTop: 'फ', hindiBottom: 'प', finger: 'right-index', width: 'w-10' },
+    { key: 'j', labelTop: 'J', labelBottom: 'j', hindiTop: 'ऱ', hindiBottom: 'र', finger: 'right-index', width: 'w-10' },
+    { key: 'k', labelTop: 'K', labelBottom: 'k', hindiTop: 'ख', hindiBottom: 'क', finger: 'right-middle', width: 'w-10' },
+    { key: 'l', labelTop: 'L', labelBottom: 'l', hindiTop: 'थ', hindiBottom: 'त', finger: 'right-ring', width: 'w-10' },
+    { key: ';', labelTop: ':', labelBottom: ';', hindiTop: 'छ', hindiBottom: 'च', finger: 'right-pinky', width: 'w-10' },
+    { key: "'", labelTop: '"', labelBottom: "'", hindiTop: 'ठ', hindiBottom: 'ट', finger: 'right-pinky', width: 'w-10' },
+    { key: 'Enter', labelTop: '', labelBottom: 'Enter', isSpecial: true, finger: 'right-pinky', width: 'w-20' },
+  ],
+  // Bottom row (ZXCVBNM)
+  [
+    { key: 'Shift', labelTop: '', labelBottom: 'Shift', isSpecial: true, finger: 'left-pinky', width: 'w-20' },
+    { key: 'z', labelTop: 'Z', labelBottom: 'z', hindiTop: 'ऒ', hindiBottom: 'ॆ', finger: 'left-pinky', width: 'w-10' },
+    { key: 'x', labelTop: 'X', labelBottom: 'x', hindiTop: 'ँ', hindiBottom: 'ं', finger: 'left-ring', width: 'w-10' },
+    { key: 'c', labelTop: 'C', labelBottom: 'c', hindiTop: 'ण', hindiBottom: 'म', finger: 'left-middle', width: 'w-10' },
+    { key: 'v', labelTop: 'V', labelBottom: 'v', hindiTop: 'ऩ', hindiBottom: 'न', finger: 'left-index', width: 'w-10' },
+    { key: 'b', labelTop: 'B', labelBottom: 'b', hindiTop: 'ऴ', hindiBottom: 'व', finger: 'left-index', width: 'w-10' },
+    { key: 'n', labelTop: 'N', labelBottom: 'n', hindiTop: 'ळ', hindiBottom: 'ल', finger: 'right-index', width: 'w-10' },
+    { key: 'm', labelTop: 'M', labelBottom: 'm', hindiTop: 'श', hindiBottom: 'स', finger: 'right-index', width: 'w-10' },
+    { key: ',', labelTop: '<', labelBottom: ',', hindiTop: 'ष', hindiBottom: ',', finger: 'right-middle', width: 'w-10' },
+    { key: '.', labelTop: '>', labelBottom: '.', hindiTop: '।', hindiBottom: '.', finger: 'right-ring', width: 'w-10' },
+    { key: '/', labelTop: '?', labelBottom: '/', hindiTop: 'य़', hindiBottom: 'य', finger: 'right-pinky', width: 'w-10' },
+    { key: 'ShiftRight', labelTop: '', labelBottom: 'Shift', isSpecial: true, finger: 'right-pinky', width: 'w-24' },
+  ],
+  // Spacebar row
+  [
+    { key: 'Ctrl', labelTop: '', labelBottom: 'Ctrl', isSpecial: true, finger: 'left-pinky', width: 'w-12' },
+    { key: 'Alt', labelTop: '', labelBottom: 'Alt', isSpecial: true, finger: 'thumb', width: 'w-12' },
+    { key: ' ', labelTop: '', labelBottom: '', isSpecial: true, finger: 'thumb', width: 'w-72' },
+    { key: 'AltRight', labelTop: '', labelBottom: 'Alt', isSpecial: true, finger: 'thumb', width: 'w-12' },
+    { key: 'CtrlRight', labelTop: '', labelBottom: 'Ctrl', isSpecial: true, finger: 'right-pinky', width: 'w-12' },
+  ],
+];
+
+export function getKeyboardRowsForLayout(layout: string) {
+  if (layout === 'inscript') {
+    return INSCRIPT_KEYBOARD_ROWS;
+  }
+  return KEYBOARD_ROWS;
+}
+
 // Mapping key codes to Hindi characters (Kruti Dev lowercase and uppercase)
 export const KEY_TO_HINDI: Record<string, string> = {
   // Lowercase / Direct keys

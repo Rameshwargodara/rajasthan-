@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, RotateCcw, ArrowRight, Award, CheckCircle2, XCircle, Clock, Zap, Target } from 'lucide-react';
+import { X, HelpCircle } from 'lucide-react';
 
 export interface TypingResultData {
   lessonTitle: string;
@@ -10,183 +10,310 @@ export interface TypingResultData {
   errorCount: number;
   elapsedSeconds: number;
   accuracy: number;
-  // Method 1: Space-delimited words
+  // Method 1: 5 keystrokes = 1 word
+  grossWPM5: number;
+  netWPM5: number;
+  grossKPM: number;
+  grossKPH: number;
+  netKPM: number;
+  netKPH: number;
+  // Method 2: Space-delimited words
   spaceWordsTotal: number;
   spaceWordsCorrect: number;
+  spaceWordsIncorrect: number;
   grossWPMWords: number;
   netWPMWords: number;
-  // Method 2: Standard 5.5 characters per word
-  grossWPM55: number;
-  netWPM55: number;
   backspaceCount: number;
 }
 
-interface ResultModalProps {
-  isOpen: boolean;
-  data: TypingResultData | null;
-  onRetry: () => void;
-  onNextLesson: () => void;
-  onClose: () => void;
-  hasNextLesson: boolean;
+export interface ResultModalProps {
+  isOpen?: boolean;
+  result?: TypingResultData | null;
+  data?: TypingResultData | null;
+  onRestart?: () => void;
+  onRetry?: () => void;
+  onNextLesson?: () => void;
+  onClose?: () => void;
+  onBackToHome?: () => void;
+  hasNextLesson?: boolean;
 }
 
 export const ResultModal: React.FC<ResultModalProps> = ({
-  isOpen,
+  isOpen = true,
+  result,
   data,
+  onRestart,
   onRetry,
   onNextLesson,
   onClose,
-  hasNextLesson,
+  onBackToHome,
+  hasNextLesson = true,
 }) => {
-  if (!isOpen || !data) return null;
+  const resultData = result || data;
+  if (!isOpen || !resultData) return null;
 
-  const minutes = Math.floor(data.elapsedSeconds / 60);
-  const seconds = data.elapsedSeconds % 60;
-  const timeFormatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  const handleRepeat = () => {
+    if (onRestart) onRestart();
+    else if (onRetry) onRetry();
+    else if (onClose) onClose();
+  };
+
+  const handleNext = () => {
+    if (onNextLesson) onNextLesson();
+    else if (onClose) onClose();
+  };
+
+  const handleClose = () => {
+    if (onClose) onClose();
+    else if (onBackToHome) onBackToHome();
+    else if (onRestart) onRestart();
+  };
+
+  // Format Duration: "03 minutes 54 seconds"
+  const minutes = Math.floor(resultData.elapsedSeconds / 60);
+  const seconds = resultData.elapsedSeconds % 60;
+  const durationText = `${String(minutes).padStart(2, '0')} minutes ${String(seconds).padStart(2, '0')} seconds`;
+
+  const timeMinutes = Math.max(1 / 60, resultData.elapsedSeconds / 60);
+
+  // Method 1 computations (5 characters per word)
+  const grossWPM5 = resultData.grossWPM5 ?? Math.round((resultData.totalChars / 5) / timeMinutes);
+  const netWPM5 = resultData.netWPM5 ?? Math.max(0, Math.round((resultData.correctChars / 5) / timeMinutes));
+  const grossKPM = resultData.grossKPM ?? Math.round(resultData.totalChars / timeMinutes);
+  const grossKPH = resultData.grossKPH ?? grossKPM * 60;
+  const netKPM = resultData.netKPM ?? Math.round(resultData.correctChars / timeMinutes);
+  const netKPH = resultData.netKPH ?? netKPM * 60;
+
+  // Method 2 computations (space separated words)
+  const totalWords = resultData.spaceWordsTotal ?? 0;
+  const correctWords = resultData.spaceWordsCorrect ?? 0;
+  const incorrectWords = resultData.spaceWordsIncorrect ?? Math.max(0, totalWords - correctWords);
+  const grossWPMWords = resultData.grossWPMWords ?? Math.round(totalWords / timeMinutes);
+  const netWPMWords = resultData.netWPMWords ?? Math.round(correctWords / timeMinutes);
+
+  const accuracyFormatted = (
+    resultData.totalChars > 0
+      ? (resultData.correctChars / resultData.totalChars) * 100
+      : 100
+  ).toFixed(2) + '%';
+
+  const backspaceText = `${resultData.backspaceCount ?? 0} times`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-lg shadow-2xl border border-slate-300 w-full max-w-xl overflow-hidden">
-        {/* Header with Trophy */}
-        <div className="bg-gradient-to-r from-indigo-700 via-indigo-600 to-blue-600 px-6 py-4 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-400/20 rounded-full border border-amber-300/40">
-              <Trophy className="w-6 h-6 text-amber-300" />
+    <div
+      id="godara-result-modal-overlay"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4 backdrop-blur-[1px] select-none animate-in fade-in duration-150"
+    >
+      {/* Windows App Style Modal Window */}
+      <div
+        id="godara-result-window"
+        className="bg-[#f0f0f0] dark:bg-slate-900 rounded-xs shadow-2xl border border-[#999999] dark:border-slate-700 w-full max-w-[700px] overflow-hidden flex flex-col text-slate-900 dark:text-slate-100 font-sans"
+        style={{ minHeight: '520px' }}
+      >
+        {/* Title Bar */}
+        <div className="bg-[#f6f6f6] dark:bg-slate-800 px-2.5 py-1 flex items-center justify-between border-b border-[#d4d4d4] dark:border-slate-700 select-none">
+          <div className="flex items-center gap-1.5 text-xs text-slate-800 dark:text-slate-200">
+            {/* Book Icon */}
+            <div className="w-3.5 h-3.5 bg-rose-600 rounded-2xs flex items-center justify-center text-[9px] text-white font-bold leading-none shadow-2xs">
+              📖
             </div>
-            <div>
-              <h2 className="text-lg font-bold">Lesson Completed!</h2>
-              <p className="text-xs text-indigo-100">
-                {data.lessonTitle} • {data.language === 'hindi' ? 'Hindi (KrutiDev)' : 'English'}
-              </p>
-            </div>
-          </div>
-          <div className="text-right">
-            <span className="text-xs bg-white/20 px-2.5 py-1 rounded-full font-medium">
-              Time: {timeFormatted}
+            <span className="font-normal text-[11.5px]">
+              Result - Godara Typing Tutor
             </span>
           </div>
-        </div>
 
-        {/* Speed Comparison: 2 Methods */}
-        <div className="p-5 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Method 1: Space-delimited Word Speed */}
-            <div className="bg-amber-50/80 border border-amber-200 rounded-lg p-3 relative overflow-hidden">
-              <div className="text-[11px] font-bold text-amber-800 uppercase tracking-wider mb-1 flex items-center gap-1">
-                <Target className="w-3.5 h-3.5 text-amber-600" />
-                Method 1: Word-by-Word (Space)
-              </div>
-              <div className="flex items-baseline justify-between mt-2">
-                <div>
-                  <div className="text-2xl font-black text-amber-900 leading-none">
-                    {data.netWPMWords} <span className="text-xs font-semibold text-amber-700">WPM</span>
-                  </div>
-                  <div className="text-[10.5px] font-medium text-amber-700 mt-0.5">
-                    Net Speed (Right Words Only)
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold text-slate-700">
-                    {data.grossWPMWords} WPM
-                  </div>
-                  <div className="text-[10px] text-slate-500">Gross Speed</div>
-                </div>
-              </div>
-              <div className="mt-2 text-[10.5px] text-amber-800/80 pt-1.5 border-t border-amber-200/60 flex justify-between">
-                <span>Words: <strong>{data.spaceWordsCorrect}</strong> / {data.spaceWordsTotal}</span>
-                <span>Wrong Words: <strong>{Math.max(0, data.spaceWordsTotal - data.spaceWordsCorrect)}</strong></span>
-              </div>
-            </div>
-
-            {/* Method 2: Standard 5.5 Letters per Word */}
-            <div className="bg-indigo-50/80 border border-indigo-200 rounded-lg p-3 relative overflow-hidden">
-              <div className="text-[11px] font-bold text-indigo-800 uppercase tracking-wider mb-1 flex items-center gap-1">
-                <Zap className="w-3.5 h-3.5 text-indigo-600" />
-                Method 2: Standard 5.5 Chars/Word
-              </div>
-              <div className="flex items-baseline justify-between mt-2">
-                <div>
-                  <div className="text-2xl font-black text-indigo-900 leading-none">
-                    {data.netWPM55} <span className="text-xs font-semibold text-indigo-700">WPM</span>
-                  </div>
-                  <div className="text-[10.5px] font-medium text-indigo-700 mt-0.5">
-                    Net Speed (5.5 Chars = 1 Word)
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-bold text-slate-700">
-                    {data.grossWPM55} WPM
-                  </div>
-                  <div className="text-[10px] text-slate-500">Gross Speed</div>
-                </div>
-              </div>
-              <div className="mt-2 text-[10.5px] text-indigo-800/80 pt-1.5 border-t border-indigo-200/60 flex justify-between">
-                <span>Characters: <strong>{data.correctChars}</strong> / {data.totalChars}</span>
-                <span>Accuracy: <strong className="text-emerald-700">{data.accuracy}%</strong></span>
-              </div>
-            </div>
-          </div>
-
-          {/* Performance Breakdown Grid */}
-          <div className="grid grid-cols-4 gap-2 text-center text-xs">
-            <div className="bg-slate-50 border border-slate-200 rounded p-2">
-              <div className="text-slate-500 text-[10px]">Accuracy</div>
-              <div className="text-base font-bold text-emerald-600 mt-0.5">{data.accuracy}%</div>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 rounded p-2">
-              <div className="text-slate-500 text-[10px]">Mistakes</div>
-              <div className="text-base font-bold text-red-600 mt-0.5">{data.errorCount}</div>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 rounded p-2">
-              <div className="text-slate-500 text-[10px]">Keystrokes</div>
-              <div className="text-base font-bold text-slate-800 mt-0.5">{data.totalChars}</div>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 rounded p-2">
-              <div className="text-slate-500 text-[10px]">Time Taken</div>
-              <div className="text-base font-bold text-indigo-700 mt-0.5">{timeFormatted}</div>
-            </div>
-          </div>
-
-          {/* Tips / Feedback */}
-          <div className="bg-slate-50 border border-slate-200 rounded p-2.5 text-[11px] text-slate-600 flex items-center gap-2">
-            <Award className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>
-              {data.accuracy >= 95
-                ? 'Excellent work! High accuracy builds smooth and consistent typing speed.'
-                : data.accuracy >= 85
-                ? 'Good effort! Focus on hitting the correct keys on the home row before accelerating.'
-                : 'Keep practicing! Slower, accurate keystrokes will yield higher net speed on official tests.'}
-            </span>
-          </div>
-        </div>
-
-        {/* Modal Actions */}
-        <div className="bg-slate-100 border-t border-slate-200 px-5 py-3 flex items-center justify-between">
-          <button
-            onClick={onRetry}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 rounded text-xs font-semibold text-slate-700 shadow-2xs cursor-pointer transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Try Again</span>
-          </button>
-
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
-              onClick={onClose}
-              className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 rounded text-xs font-medium text-slate-700 cursor-pointer"
+              onClick={() => {}}
+              title="Help"
+              className="w-5 h-4.5 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 rounded-2xs text-slate-700 dark:text-slate-300 text-xs transition-colors cursor-pointer"
             >
-              Close
+              <HelpCircle className="w-3 h-3" />
+            </button>
+            <button
+              onClick={handleClose}
+              title="Close"
+              className="w-5 h-4.5 flex items-center justify-center hover:bg-red-600 hover:text-white rounded-2xs text-slate-700 dark:text-slate-300 text-xs transition-colors cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Strip */}
+        <div className="bg-[#e4e4e4] dark:bg-slate-800/80 px-2 pt-1 border-b border-[#cccccc] dark:border-slate-700 flex items-center">
+          <div className="bg-white dark:bg-slate-900 px-3 py-1 text-[11px] font-medium text-slate-900 dark:text-slate-100 border-t border-l border-r border-[#cccccc] dark:border-slate-700 rounded-t-xs -mb-[1px] relative z-10 shadow-2xs">
+            Result
+          </div>
+        </div>
+
+        {/* Main Content Area (White Box with border) */}
+        <div className="p-2 sm:p-3 flex-1 flex flex-col">
+          <div className="bg-white dark:bg-slate-950 border border-[#cccccc] dark:border-slate-800 p-4 sm:p-6 flex-1 flex flex-col justify-between rounded-xs overflow-y-auto max-h-[72vh]">
+            <div>
+              {/* Header Title in Green */}
+              <div className="text-center">
+                <h2 className="text-[#16a34a] dark:text-emerald-400 font-bold text-base sm:text-lg tracking-tight">
+                  Godara Typing Tutor
+                </h2>
+                <div className="text-center mt-1">
+                  <span className="text-xs sm:text-[13px] text-slate-900 dark:text-slate-100 underline decoration-slate-800 dark:decoration-slate-200 font-medium">
+                    Detailed Result as below
+                  </span>
+                </div>
+              </div>
+
+              {/* Summary Stats 2-Column Row */}
+              <div className="mt-4 sm:mt-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-xs sm:text-[12.5px] text-slate-900 dark:text-slate-100 font-normal px-2 sm:px-6">
+                <div className="flex justify-between sm:justify-start">
+                  <span className="w-44 text-slate-800 dark:text-slate-200">Test Duration</span>
+                  <span className="font-medium">: {durationText}</span>
+                </div>
+                <div className="flex justify-between sm:justify-start">
+                  <span className="w-44 text-slate-800 dark:text-slate-200">Total Words Typed</span>
+                  <span className="font-medium">: {totalWords}</span>
+                </div>
+                <div className="flex justify-between sm:justify-start">
+                  <span className="w-44 text-slate-800 dark:text-slate-200">Correct Words Typed</span>
+                  <span className="font-medium">: {correctWords}</span>
+                </div>
+                <div className="flex justify-between sm:justify-start">
+                  <span className="w-44 text-slate-800 dark:text-slate-200">Incorrect Words Typed</span>
+                  <span className="font-medium">: {incorrectWords}</span>
+                </div>
+              </div>
+
+              {/* Method 1 Section */}
+              <div className="mt-5 px-2 sm:px-6">
+                <div className="text-[11.5px] text-slate-800 dark:text-slate-200 font-medium">
+                  Method 1{' '}
+                  <span className="text-slate-500 dark:text-slate-400 italic text-[10.5px]">
+                    (one word = 5 character or key strokes)
+                  </span>
+                </div>
+
+                <div className="mt-1.5 space-y-1 text-xs sm:text-[12.5px] text-slate-900 dark:text-slate-100">
+                  <div className="flex">
+                    <span className="w-32 sm:w-36 text-slate-800 dark:text-slate-200 pl-4">
+                      Net Speed
+                    </span>
+                    <div>
+                      <div>: {netWPM5} words per minute</div>
+                      <div className="text-slate-600 dark:text-slate-400">
+                        : {netKPM} key strokes per minute{' '}
+                        <span className="italic text-slate-500 dark:text-slate-400">
+                          ({netKPH} per hour)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex mt-1">
+                    <span className="w-32 sm:w-36 text-slate-800 dark:text-slate-200 pl-4">
+                      Gross Speed
+                    </span>
+                    <div>
+                      <div>: {grossWPM5} words per minute</div>
+                      <div className="text-slate-600 dark:text-slate-400">
+                        : {grossKPM} key strokes per minute{' '}
+                        <span className="italic text-slate-500 dark:text-slate-400">
+                          ({grossKPH} per hour)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex">
+                    <span className="w-32 sm:w-36 text-slate-800 dark:text-slate-200 pl-4">
+                      Accuracy
+                    </span>
+                    <span>: {accuracyFormatted}</span>
+                  </div>
+
+                  <div className="flex">
+                    <span className="w-32 sm:w-36 text-slate-800 dark:text-slate-200 pl-4">
+                      Backspace
+                    </span>
+                    <span>: {backspaceText}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Method 2 Section */}
+              <div className="mt-4 px-2 sm:px-6">
+                <div className="text-[11.5px] text-slate-800 dark:text-slate-200 font-medium">
+                  Method 2{' '}
+                  <span className="text-slate-500 dark:text-slate-400 italic text-[10.5px]">
+                    (one word = group of letters separated by space)
+                  </span>
+                </div>
+
+                <div className="mt-1.5 space-y-1 text-xs sm:text-[12.5px] text-slate-900 dark:text-slate-100">
+                  <div className="flex">
+                    <span className="w-32 sm:w-36 text-slate-800 dark:text-slate-200 pl-4">
+                      Net Speed
+                    </span>
+                    <div>
+                      <div>: {netWPMWords} words per minute</div>
+                      <div className="text-slate-600 dark:text-slate-400">
+                        : {netKPM} key strokes per minute{' '}
+                        <span className="italic text-slate-500 dark:text-slate-400">
+                          ({netKPH} per hour)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex mt-1">
+                    <span className="w-32 sm:w-36 text-slate-800 dark:text-slate-200 pl-4">
+                      Gross Speed
+                    </span>
+                    <div>
+                      <div>: {grossWPMWords} words per minute</div>
+                      <div className="text-slate-600 dark:text-slate-400">
+                        : {grossKPM} key strokes per minute{' '}
+                        <span className="italic text-slate-500 dark:text-slate-400">
+                          ({grossKPH} per hour)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex">
+                    <span className="w-32 sm:w-36 text-slate-800 dark:text-slate-200 pl-4">
+                      Accuracy
+                    </span>
+                    <span>: {accuracyFormatted}</span>
+                  </div>
+
+                  <div className="flex">
+                    <span className="w-32 sm:w-36 text-slate-800 dark:text-slate-200 pl-4">
+                      Backspace
+                    </span>
+                    <span>: {backspaceText}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Dialog Action Buttons */}
+          <div className="mt-3 flex items-center justify-between px-1">
+            <button
+              id="btn-repeat-lesson"
+              onClick={handleRepeat}
+              className="px-5 py-1 bg-[#e1e1e1] hover:bg-[#d0d0d0] dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 text-xs border border-[#adadad] dark:border-slate-600 rounded-xs shadow-2xs font-normal cursor-pointer active:scale-98 transition-all"
+            >
+              Repeat
             </button>
 
-            {hasNextLesson && (
-              <button
-                onClick={onNextLesson}
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold shadow-xs cursor-pointer transition-colors"
-              >
-                <span>Next Exercise</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            )}
+            <button
+              id="btn-next-lesson"
+              onClick={handleNext}
+              className="px-5 py-1 bg-[#e1e1e1] hover:bg-[#d0d0d0] dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 text-xs border border-[#adadad] dark:border-slate-600 rounded-xs shadow-2xs font-normal cursor-pointer active:scale-98 transition-all"
+            >
+              {hasNextLesson ? 'Next>>' : 'Close'}
+            </button>
           </div>
         </div>
       </div>

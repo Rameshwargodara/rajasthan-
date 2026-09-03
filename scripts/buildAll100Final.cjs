@@ -1,0 +1,35 @@
+const fs = require('fs');
+const path = require('path');
+
+function countWords(str) {
+  return str.trim().split(/\s+/).filter(Boolean).length;
+}
+
+// 100 topics descriptions and comprehensive expansions
+// We will write rich domain text for all 100 lessons covering:
+// 1. Core overview and definitions
+// 2. Structural/technical/geographical details
+// 3. District-level implementation & historical significance in Rajasthan
+// 4. Administrative relevance, LDC exam terminology, and rules/protocols
+// 5. Contemporary initiatives, statistics, and forward-looking governance
+
+// Let's create an extensive map of all 100 lessons:
+const rawLessonsData = [
+  {
+    id: 1,
+    title: "Exercise : 1/100 - Rajasthan Geography & Physical Divisions",
+    category: "Rajasthan Geography",
+    topic: "Rajasthan Geography & Physical Divisions",
+    coreText: `Rajasthan is the largest state in the Republic of India in terms of total geographical area, covering approximately three hundred forty-two thousand two hundred thirty-nine square kilometres, which represents about 10.41 percent of the total landmass of India. Situated in the north-western region of the subcontinent, it shares international boundaries with Pakistan across five border districts in the west and northwest, while bordering the Indian states of Punjab, Haryana, Uttar Pradesh, Madhya Pradesh, and Gujarat. The tropic of cancer passes through the southernmost tip of the state, traversing the districts of Banswara and Dungarpur. The physical geography of Rajasthan presents a fascinating mosaic of extreme climatic variations, diverse geological formations, distinct soil profiles, and unique biological adaptations. Understanding these physical characteristics is essential for administrative personnel to plan regional developmental projects, water distribution networks, and disaster management strategies efficiently.
+
+The state is broadly classified into four major physiographic divisions: the Western Sandy Plains or the Great Indian Thar Desert, the Aravalli Mountain Range, the Eastern Plains, and the South-Eastern Hadoti Plateau. The Western Sandy Plains encompass more than sixty percent of the state total land area and are home to nearly forty percent of its population. This arid tract is further subdivided into the Marusthali, characterized by shifting sand dunes known as Dhrians, and the semi-arid Rajasthan Bagar, which includes inland drainage basins such as the Shekhawati tract and the fertile Luni River basin. Despite severe climatic constraints, sparse rainfall, and extreme temperature fluctuations, the Thar Desert is considered one of the most densely populated desert ecosystems in the world, sustained by resilient pastoral communities, hardy desert livestock, and innovative traditional rainwater collection systems.
+
+The Aravalli Mountain Range is one of the oldest fold mountain systems in the world, dating back to the Precambrian geological era. Running diagonally across Rajasthan from southwest near Mount Abu to northeast up to the Khetri belt and extending to the Raisina Hill in New Delhi, the Aravalli range spans approximately six hundred ninety-two kilometres, with five hundred fifty kilometres lying entirely within Rajasthan. Guru Shikhar, situated near Mount Abu in the Sirohi district, stands as the highest peak of the range with an elevation of one thousand seven hundred twenty-two metres above mean sea level. The Aravallis act as a crucial watershed and climatic divide, preventing the eastward expansion of the Thar Desert into the fertile agricultural plains of eastern Rajasthan and Madhya Pradesh, while also serving as the source for several major seasonal river systems including the Banas, Luni, Sabarmati, and Sukri.
+
+The Eastern Plains of Rajasthan lie to the east of the central Aravalli hills, encompassing the fertile river basins of the Banas, Banganga, and the Middle Mahi river, also known as the Chappan Plain in the Banswara and Pratapgarh region. Formed primarily by extensive alluvial deposits brought down by perennial and seasonal river streams, these plains possess highly productive soils such as loamy sand and clayey loam, supporting intensive multi-crop agriculture including wheat, mustard, barley, and pulses. In contrast, the South-Eastern Hadoti Plateau, covering districts like Kota, Bundi, Baran, and Jhalawar, represents an extension of the Deccan Lava Trap, characterized by rich black cotton soil, undulating basaltic terrain, and significant limestone deposits. This region receives the highest average annual precipitation in the state and is extensively drained by the perennial Chambal river and its tributaries, making it a major powerhouse for agro-industries and thermal power generation.
+
+For administrative officers and ministerial staff preparing for Rajasthan state examinations, mastering the detailed nuances of physical geography is vital. Land revenue administration, district boundary demarcations, crop insurance assessments, drought relief allocations, and watershed management all depend heavily on accurate geographical understanding. Clerks must accurately record local land classification terminology such as Chahi (irrigated land), Barani (unirrigated rainfed land), and Magra (rocky hill slopes) in village land revenue registers. Familiarity with topographical maps, district profiles, agro-climatic zones, and ground water vulnerability indexes ensures that clerical support in government secretariats and district collectorates contributes directly to sound policymaking, balanced regional development, and effective public grievance redressal across the state.`
+  }
+];
+
+console.log('Loader ready');
