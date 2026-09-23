@@ -43,10 +43,7 @@ export function usePWAInstall() {
 
   const install = async () => {
     if (!deferredPrompt) {
-      // If browser hasn't fired beforeinstallprompt yet (or user is on desktop Chrome/Edge)
-      alert(
-        'To install Godara Typing Tutor on Windows:\n\n1. Look at your browser address bar (top right)\n2. Click the [Install App ⊕] icon or click Browser Menu (⋮) -> "Install Godara Typing Tutor" / "Apps -> Install this site as an app".\n3. It will create a Windows Desktop shortcut and run as a standalone app!'
-      );
+      // Browser hasn't fired beforeinstallprompt or desktop install already initiated
       return false;
     }
     await deferredPrompt.prompt();

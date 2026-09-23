@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Minus, Square, X } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 
 interface TitleBarProps {
   title?: string;
@@ -20,33 +20,6 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         <span className="text-[11.5px] font-medium tracking-tight text-slate-900">
           {title}
         </span>
-      </div>
-
-      <div className="flex items-center -mr-2 h-full">
-        <button
-          id="btn-window-minimize"
-          title="Minimize"
-          className="h-full px-3 hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-colors"
-          onClick={() => {}}
-        >
-          <Minus className="w-3.5 h-3.5" />
-        </button>
-        <button
-          id="btn-window-maximize"
-          title="Maximize"
-          className="h-full px-3 hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-colors"
-          onClick={() => {}}
-        >
-          <Square className="w-3 h-3" />
-        </button>
-        <button
-          id="btn-window-close"
-          title="Close"
-          className="h-full px-3 hover:bg-red-600 hover:text-white flex items-center justify-center text-slate-600 transition-colors"
-          onClick={() => {}}
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
       </div>
     </div>
   );

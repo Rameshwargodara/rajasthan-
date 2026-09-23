@@ -44,6 +44,7 @@ import { TypingModule, SelectedModuleState } from './types';
 export default function App() {
   const [currentView, setCurrentView] = useState<'home' | 'typing-lesson' | 'english-test'>('home');
   const [initialEnglishLessonId, setInitialEnglishLessonId] = useState<number>(1);
+  const [initialTypingStep, setInitialTypingStep] = useState<number | undefined>(undefined);
   const initialSettings = useMemo(() => getStoredTypingSettings(), []);
   const [typingLanguage, setTypingLanguage] = useState<'hindi' | 'english'>(
     () => initialSettings.language || 'hindi'
@@ -94,6 +95,9 @@ export default function App() {
       setCurrentView('english-test');
       return;
     }
+
+    const targetStep = title === 'Take Tests' ? 4 : title === 'Practice Words' ? 3 : 2;
+    setInitialTypingStep(targetStep);
 
     // 2. KrutiDev layout routes
     if (category.includes('KrutiDev') || title.includes('KrutiDev')) {
@@ -177,6 +181,7 @@ export default function App() {
       <HindiTypingLesson
         initialLanguage={typingLanguage}
         initialLayout={activeLayout}
+        initialStep={initialTypingStep}
         onBackToHome={() => setCurrentView('home')}
         onOpenEnglishTestScreen={() => setCurrentView('english-test')}
         theme={theme}
@@ -190,14 +195,14 @@ export default function App() {
   // Pre-calculate module progress for each tile on the dashboard
   const enLearnProg = getStoredModuleProgress(buildModuleId('english', 2), 60);
   const enTestProg = getStoredModuleProgress(buildModuleId('english', 4), 60);
-  const kdLearnProg = getStoredModuleProgress(buildModuleId('krutidev', 2), 60);
-  const kdTestProg = getStoredModuleProgress(buildModuleId('krutidev', 4), 60);
-  const gailLearnProg = getStoredModuleProgress(buildModuleId('remington_gail', 2), 60);
-  const gailTestProg = getStoredModuleProgress(buildModuleId('remington_gail', 4), 60);
-  const inscriptLearnProg = getStoredModuleProgress(buildModuleId('inscript', 2), 60);
-  const inscriptTestProg = getStoredModuleProgress(buildModuleId('inscript', 4), 60);
-  const cbiLearnProg = getStoredModuleProgress(buildModuleId('remington_cbi', 2), 60);
-  const cbiTestProg = getStoredModuleProgress(buildModuleId('remington_cbi', 4), 60);
+  const kdLearnProg = getStoredModuleProgress(buildModuleId('krutidev', 2), 59);
+  const kdTestProg = getStoredModuleProgress(buildModuleId('krutidev', 4), 50);
+  const gailLearnProg = getStoredModuleProgress(buildModuleId('remington_gail', 2), 59);
+  const gailTestProg = getStoredModuleProgress(buildModuleId('remington_gail', 4), 50);
+  const inscriptLearnProg = getStoredModuleProgress(buildModuleId('inscript', 2), 59);
+  const inscriptTestProg = getStoredModuleProgress(buildModuleId('inscript', 4), 50);
+  const cbiLearnProg = getStoredModuleProgress(buildModuleId('remington_cbi', 2), 59);
+  const cbiTestProg = getStoredModuleProgress(buildModuleId('remington_cbi', 4), 50);
 
   return (
     <div

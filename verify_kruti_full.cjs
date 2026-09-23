@@ -251,6 +251,10 @@ const testList = [
   "साँचे", "स्वयं", "स्वीकृति", "हवा हवाई", "षट्कोण", "त्रिकोणमिति", "ज्ञापन"
 ];
 
-for (const t of testList) {
-  console.log(`${t} -> ${unicodeToKruti(t)}`);
+module.exports = { unicodeToKruti };
+
+if (require.main === module) {
+  for (const t of testList) {
+    console.log(`${t} -> ${unicodeToKruti(t)}`);
+  }
 }

@@ -37,7 +37,7 @@ export const KRUTI_ALT_CODES: AltCodeItem[] = [
 export const KEYBOARD_ROWS = [
   // Number row
   [
-    { key: '`', labelTop: '~', labelBottom: '`', hindiTop: '', hindiBottom: '', finger: 'left-pinky', width: 'w-10' },
+    { key: '`', labelTop: '~', labelBottom: '`', hindiTop: '्', hindiBottom: 'ृ', finger: 'left-pinky', width: 'w-10' },
     { key: '1', labelTop: '!', labelBottom: '1', hindiTop: '!', hindiBottom: '1', finger: 'left-pinky', width: 'w-10' },
     { key: '2', labelTop: '@', labelBottom: '2', hindiTop: '/', hindiBottom: '२', finger: 'left-ring', width: 'w-10' },
     { key: '3', labelTop: '#', labelBottom: '3', hindiTop: 'रु', hindiBottom: '३', finger: 'left-middle', width: 'w-10' },
@@ -49,7 +49,7 @@ export const KEYBOARD_ROWS = [
     { key: '9', labelTop: '(', labelBottom: '9', hindiTop: '(', hindiBottom: '९', finger: 'right-ring', width: 'w-10' },
     { key: '0', labelTop: ')', labelBottom: '0', hindiTop: ')', hindiBottom: '०', finger: 'right-pinky', width: 'w-10' },
     { key: '-', labelTop: '_', labelBottom: '-', hindiTop: 'ऋ', hindiBottom: '.', finger: 'right-pinky', width: 'w-10' },
-    { key: '=', labelTop: '+', labelBottom: '=', hindiTop: 'त्र', hindiBottom: 'त्र', finger: 'right-pinky', width: 'w-10' },
+    { key: '=', labelTop: '+', labelBottom: '=', hindiTop: '़', hindiBottom: 'त्र', finger: 'right-pinky', width: 'w-10' },
     { key: 'Backspace', labelTop: '', labelBottom: 'Backspace', isSpecial: true, finger: 'right-pinky', width: 'w-20' },
   ],
   // Top row (QWERTY)
@@ -72,7 +72,7 @@ export const KEYBOARD_ROWS = [
   // Home row (ASDFGHJKL)
   [
     { key: 'CapsLock', labelTop: '', labelBottom: 'caps lock', isSpecial: true, finger: 'left-pinky', width: 'w-16' },
-    { key: 'a', labelTop: 'A', labelBottom: 'a', hindiTop: 'ाे', hindiBottom: 'ं', finger: 'left-pinky', width: 'w-10' },
+    { key: 'a', labelTop: 'A', labelBottom: 'a', hindiTop: '।', hindiBottom: 'ं', finger: 'left-pinky', width: 'w-10' },
     { key: 's', labelTop: 'S', labelBottom: 's', hindiTop: 'ै', hindiBottom: 'े', finger: 'left-ring', width: 'w-10' },
     { key: 'd', labelTop: 'D', labelBottom: 'd', hindiTop: 'क्', hindiBottom: 'क', finger: 'left-middle', width: 'w-10' },
     { key: 'f', labelTop: 'F', labelBottom: 'f', hindiTop: 'थ्', hindiBottom: 'ि', finger: 'left-index', width: 'w-10' },
@@ -97,7 +97,7 @@ export const KEYBOARD_ROWS = [
     { key: 'm', labelTop: 'M', labelBottom: 'm', hindiTop: 'ड', hindiBottom: 'उ', finger: 'right-index', width: 'w-10' },
     { key: ',', labelTop: '<', labelBottom: ',', hindiTop: 'ढ', hindiBottom: 'ए', finger: 'right-middle', width: 'w-10' },
     { key: '.', labelTop: '>', labelBottom: '.', hindiTop: 'झ्', hindiBottom: 'ण्', finger: 'right-ring', width: 'w-10' },
-    { key: '/', labelTop: '?', labelBottom: '/', hindiTop: 'ध', hindiBottom: 'ध्', finger: 'right-pinky', width: 'w-10' },
+    { key: '/', labelTop: '?', labelBottom: '/', hindiTop: 'घ्', hindiBottom: 'ध्', finger: 'right-pinky', width: 'w-10' },
     { key: 'ShiftRight', labelTop: '', labelBottom: 'Shift', isSpecial: true, finger: 'right-pinky', width: 'w-24' },
   ],
   // Spacebar row
@@ -240,9 +240,9 @@ export const KEY_TO_HINDI: Record<string, string> = {
   'D': 'क्',
   'F': 'थ्',
   'S': 'ै',
-  'A': 'ाे',
+  'A': '।',
   'L': 'स्',
-  ':': 'रु',
+  ':': 'रू',
   '"': 'ष्',
   'Q': 'फ',
   'W': 'ॅ',
@@ -266,7 +266,35 @@ export const KEY_TO_HINDI: Record<string, string> = {
   'M': 'ड',
   '<': 'ढ',
   '>': 'झ्',
-  '?': 'ध',
+  '?': 'घ्',
+
+  // Number row keys and symbols (KrutiDev mappings)
+  '1': '1',
+  '2': '२',
+  '3': '३',
+  '4': '४',
+  '5': '५',
+  '6': '६',
+  '7': '७',
+  '8': '८',
+  '9': '९',
+  '0': '०',
+  '-': '.',
+  '=': 'त्र',
+  '!': '!',
+  '@': '/',
+  '#': 'रु',
+  '$': '+',
+  '%': ':',
+  '^': '‘',
+  '&': '-',
+  '*': '’',
+  '(': '(',
+  ')': ')',
+  '_': 'ऋ',
+  '+': '़',
+  '`': 'ृ',
+  '~': '्',
 };
 
 // Map Hindi character to expected English key press
@@ -296,15 +324,43 @@ export const HINDI_TO_KEY: Record<string, string> = {
   'ख्': '[',
   'ग': 'x',
   'ब': 'c',
+  'ब्': 'C',
   'अ': 'v',
+  'ट': 'V',
   'इ': 'b',
+  'ठ': 'B',
   'द': 'n',
   'उ': 'm',
+  'ड': 'M',
   'ए': ',',
+  'ढ': '<',
   'ण': '.',
   'ण्': '.',
+  'घ': '?',
+  'घ्': '?',
   'ध': '/',
   'ध्': '/',
+  '।': 'A',
+  ',': ']',
+  '?': '\\',
+  'रु': '#',
+  'रू': ':',
+  'ऋ': '_',
+  'त्र': '=',
+  '/': '@',
+  '-': '&',
+  '‘': '^',
+  '’': '*',
+  '“': '^',
+  '”': '*',
+  "'": '^',
+  '"': '^',
+  '(': '(',
+  ')': ')',
+  ':': '%',
+  '+': '$',
+  '़': '+',
+  '.': '-',
   ' ': ' ',
 };
 
@@ -368,19 +424,19 @@ export function getFingerForKey(keyName: string): {
   if (['3', 'e', 'd', 'c'].includes(lower)) {
     return { finger: 'left-middle', hand: 'left', fingerIndex: 2 };
   }
-  if (['4', '5', 'r', 't', 'f', 'g', 'v', 'b'].includes(lower)) {
+  if (['4', '5', '%', '$', 'r', 't', 'f', 'g', 'v', 'b'].includes(lower)) {
     return { finger: 'left-index', hand: 'left', fingerIndex: 3 };
   }
-  if (['6', '7', 'y', 'u', 'h', 'j', 'n', 'm'].includes(lower)) {
+  if (['6', '7', '^', '&', 'y', 'u', 'h', 'j', 'n', 'm'].includes(lower)) {
     return { finger: 'right-index', hand: 'right', fingerIndex: 3 };
   }
-  if (['8', 'i', 'k', ','].includes(lower)) {
+  if (['8', '*', 'i', 'k', ','].includes(lower)) {
     return { finger: 'right-middle', hand: 'right', fingerIndex: 2 };
   }
-  if (['9', 'o', 'l', '.'].includes(lower)) {
+  if (['9', '(', 'o', 'l', '.'].includes(lower)) {
     return { finger: 'right-ring', hand: 'right', fingerIndex: 1 };
   }
-  if (['0', '-', '=', 'p', '[', ']', '\\', ';', "'", '/', 'enter', 'backspace'].includes(lower)) {
+  if (['0', ')', '-', '=', '+', 'p', '[', ']', '\\', ';', "'", '"', '/', 'enter', 'backspace'].includes(lower)) {
     return { finger: 'right-pinky', hand: 'right', fingerIndex: 0 };
   }
   if (lower === ' ' || lower === 'space' || lower === 'alt') {

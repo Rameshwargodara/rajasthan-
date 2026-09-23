@@ -1,23 +1,23 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { TitleBar } from './TitleBar';
 import { ResultModal, TypingResultData } from './ResultModal';
+import { alignAndEvaluateWords } from '../lib/typingEvaluation';
 import { RSSB_LDC_ENGLISH_LESSONS, EnglishTestLesson } from '../data/rssbLdcEnglishLessons';
+import { parseExerciseFile, ParseResult } from '../lib/documentParser';
 import {
   FileText,
-  Volume2,
-  VolumeX,
   Printer,
-  PlusCircle,
   X,
-  Play,
-  Pause,
   RotateCcw,
-  CheckCircle2,
-  AlertTriangle,
   ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
-  Download,
+  UploadCloud,
+  FileUp,
+  CheckCircle2,
+  AlertCircle,
+  Trash2,
+  Loader2,
+  FileCheck,
+  PlusCircle,
 } from 'lucide-react';
 
 interface EnglishTypingTestScreenProps {
@@ -26,49 +26,132 @@ interface EnglishTypingTestScreenProps {
   initialTheme?: 'light' | 'dark';
 }
 
+const CUSTOM_STORAGE_KEY = 'soni_ldc_custom_exercises';
+
+const loadStoredCustomLessons = (): EnglishTestLesson[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(CUSTOM_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to read custom exercises from storage:', err);
+  }
+  return [];
+};
+
+const saveCustomLessonsToStorage = (customLessons: EnglishTestLesson[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CUSTOM_STORAGE_KEY, JSON.stringify(customLessons));
+  } catch (err) {
+    console.error('Failed to persist custom exercises to storage:', err);
+  }
+};
+
 type BackspaceMode = 'full' | 'one_word' | 'deactivate';
-type HighlightMode = 'word' | 'word_error' | 'no_highlight';
+type HighlightMode = 'word' | 'word_error' | 'no_highlight' | 'letter';
 type TestDuration = 1 | 2 | 5 | 10 | 15 | 20;
+
+// Reusable audio synthesizers for offline realistic typing experience
+let audioCtx: AudioContext | null = null;
+const getAudioContext = () => {
+  if (typeof window === 'undefined') return null;
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
+};
+
+const playKeyClick = (soundEnabled = true) => {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(600, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.04);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.045);
+  } catch {
+    // ignore audio failure
+  }
+};
+
+const playErrorBeep = (soundEnabled = true) => {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(190, ctx.currentTime);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.095);
+  } catch {
+    // ignore audio failure
+  }
+};
 
 export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = ({
   onBackToHome,
   initialLessonId = 1,
-  initialTheme = 'light',
 }) => {
-  // Lessons list state (supports custom added exercises)
-  const [lessons, setLessons] = useState<EnglishTestLesson[]>(() => RSSB_LDC_ENGLISH_LESSONS);
+  // Lessons list state (combines official 500 lessons with custom stored exercises)
+  const [lessons, setLessons] = useState<EnglishTestLesson[]>(() => {
+    const custom = loadStoredCustomLessons();
+    return [...RSSB_LDC_ENGLISH_LESSONS, ...custom];
+  });
   const [selectedLessonId, setSelectedLessonId] = useState<number>(initialLessonId);
 
-  // Appearance & Font Settings
-  const [selectedFont, setSelectedFont] = useState<string>('Segoe UI, Tahoma, sans-serif');
-  const [isBold, setIsBold] = useState<boolean>(false);
-  const [fontSize, setFontSize] = useState<number>(36);
-  const [theme, setTheme] = useState<'light' | 'dark'>(initialTheme);
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  // Exam Mode State: when active, hides settings sidebar and expands test area
+  const [isExamMode, setIsExamMode] = useState<boolean>(false);
 
-  // Settings Sidebar States
+  // Appearance & Font Settings (exact match to screenshot: default font size 18)
+  const selectedFont = 'Segoe UI, Tahoma, sans-serif';
+  const isBold = false;
+  const [fontSize, setFontSize] = useState<number>(18);
+  const soundEnabled = true;
+
+  // Settings Sidebar States (exact defaults from Screenshot 276)
   const [backspaceOption, setBackspaceOption] = useState<BackspaceMode>('one_word');
   const [highlightOption, setHighlightOption] = useState<HighlightMode>('no_highlight');
   const [showScrollbar, setShowScrollbar] = useState<boolean>(true);
   const [autoScroll, setAutoScroll] = useState<boolean>(false);
 
-  // Paragraph Settings
+  // Paragraph Settings (exact defaults from Screenshot 276: Apply Word Limit checked, 600 words)
   const [applyWordLimit, setApplyWordLimit] = useState<boolean>(true);
-  const [wordLimit, setWordLimit] = useState<number>(500);
-  const [applyKeystrokeLimit, setApplyKeystrokeLimit] = useState<boolean>(false);
-  const [keystrokeLimit, setKeystrokeLimit] = useState<number>(1250);
+  const [wordLimit, setWordLimit] = useState<number>(600);
 
-  // Word Processing Mode
+  // Word Processing Mode (NTPC/SSC/Court)
   const [wordProcessorMode, setWordProcessorMode] = useState<boolean>(false);
   const [allowParagraphs, setAllowParagraphs] = useState<boolean>(false);
-  const [allowTabs, setAllowTabs] = useState<boolean>(false);
-  const [allowCorrection, setAllowCorrection] = useState<boolean>(false);
 
   // Test Execution States
   const [testDuration, setTestDuration] = useState<TestDuration>(10);
   const [typedText, setTypedText] = useState<string>('');
   const [isTesting, setIsTesting] = useState<boolean>(false);
-  const [isPaused, setIsPaused] = useState<boolean>(false);
   const [timeRemaining, setTimeRemaining] = useState<number>(10 * 60);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [backspaceCount, setBackspaceCount] = useState<number>(0);
@@ -80,79 +163,95 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [resultData, setResultData] = useState<TypingResultData | null>(null);
 
-  // Custom Exercise Input States
+  // Custom Exercise & File Import States
+  const [modalTab, setModalTab] = useState<'upload' | 'manual'>('upload');
   const [customTitle, setCustomTitle] = useState<string>('');
-  const [customCategory, setCustomCategory] = useState<string>('RSSB LDC Practice');
+  const [customCategory, setCustomCategory] = useState<string>('');
   const [customContent, setCustomContent] = useState<string>('');
+  const [isParsingFile, setIsParsingFile] = useState<boolean>(false);
+  const [parseProgress, setParseProgress] = useState<string>('');
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [isDraggingFile, setIsDraggingFile] = useState<boolean>(false);
+  const [uploadedFileMeta, setUploadedFileMeta] = useState<{
+    name: string;
+    size: string;
+    type: string;
+    words: number;
+    pages?: number;
+  } | null>(null);
 
-  // Refs
+  // Hidden file input ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Refs for tracking DOM elements and state without rerenders
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const targetBoxRef = useRef<HTMLDivElement>(null);
   const activeWordRef = useRef<HTMLSpanElement>(null);
   const timerRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const elapsedSecondsRef = useRef<number>(0);
+  const typedTextRef = useRef<string>('');
+  const handleCompleteTestRef = useRef<() => void>(() => {});
 
-  const currentLesson = useMemo(() => {
-    return lessons.find((l) => l.id === selectedLessonId) || lessons[0];
+  // Retrieve current active lesson (supports up to 500 exercises)
+  const currentLesson: EnglishTestLesson = useMemo(() => {
+    const found = lessons.find((l) => l.id === selectedLessonId);
+    if (found) return found;
+
+    // Fallback template for any exercise from 101 to 500
+    const fallbackSeed = lessons[(selectedLessonId - 1) % lessons.length];
+    return {
+      id: selectedLessonId,
+      title: `Exercise : ${selectedLessonId}/500 - RSSB LDC Mock Test`,
+      category: 'RSSB LDC Practice',
+      content: fallbackSeed ? fallbackSeed.content : RSSB_LDC_ENGLISH_LESSONS[0].content,
+    };
   }, [lessons, selectedLessonId]);
 
-  // Clean target words array
-  const targetWords = useMemo(() => {
-    return currentLesson.content.trim().split(/\s+/);
-  }, [currentLesson.content]);
+  // Clean raw lesson text (ensuring tabs are removed as they are not part of exams)
+  const cleanTargetText = useMemo(() => {
+    return currentLesson.content.replace(/\r\n/g, '\n').replace(/\t+/g, ' ').trim();
+  }, [currentLesson]);
 
-  // User typed words array
+  // Split target words
+  const targetWords = useMemo(() => {
+    return cleanTargetText.split(/\s+/).filter(Boolean);
+  }, [cleanTargetText]);
+
+  // Split typed words
   const typedWords = useMemo(() => {
-    return typedText.length === 0 ? [] : typedText.split(/\s+/);
+    return typedText.trim().length > 0 ? typedText.trim().split(/\s+/).filter(Boolean) : [];
   }, [typedText]);
 
-  // Active word index
+  // Determine active target word index
   const currentWordIndex = useMemo(() => {
-    if (typedText.length === 0) return 0;
-    const endsWithSpace = typedText.endsWith(' ') || typedText.endsWith('\n');
-    return endsWithSpace ? typedWords.length : Math.max(0, typedWords.length - 1);
-  }, [typedText, typedWords]);
-
-  // Sound generator
-  const playBeep = (isError: boolean) => {
-    if (!soundEnabled) return;
-    try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      if (!isError) {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        gain.gain.setValueAtTime(0.06, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.03);
-      } else {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(180, ctx.currentTime);
-        gain.gain.setValueAtTime(0.12, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.08);
-      }
-    } catch {
-      // Ignore audio autoplay restrictions
+    if (typedText.endsWith(' ') || typedText.endsWith('\n')) {
+      return typedWords.length;
     }
+    return Math.max(0, typedWords.length - 1);
+  }, [typedText, typedWords.length]);
+
+  // Cursor constraint helper: keep cursor at the end
+  const ensureCursorAtEnd = () => {
+    if (!inputRef.current) return;
+    const len = inputRef.current.value.length;
+    inputRef.current.setSelectionRange(len, len);
   };
 
-  // Reset test state when switching lesson or duration
+  // Reset test state
   const resetTest = (newDuration?: TestDuration) => {
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     const dur = newDuration ?? testDuration;
     setIsTesting(false);
-    setIsPaused(false);
+    startTimeRef.current = null;
     setTimeRemaining(dur * 60);
     setElapsedSeconds(0);
+    elapsedSecondsRef.current = 0;
     setTypedText('');
+    typedTextRef.current = '';
     setBackspaceCount(0);
     setTotalKeystrokes(0);
     setShowResultModal(false);
@@ -164,28 +263,65 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
 
   useEffect(() => {
     resetTest();
-  }, [selectedLessonId, testDuration]);
+  }, [selectedLessonId, testDuration, applyWordLimit, wordLimit]);
 
-  // Handle timer countdown
+  // When switching to Exam Mode, enforce strict official exam settings
+  const handleEnterExamMode = () => {
+    setIsExamMode(true);
+    setBackspaceOption('one_word');
+    setHighlightOption('no_highlight');
+    setShowScrollbar(true);
+    setAutoScroll(false);
+    setApplyWordLimit(true);
+    setWordLimit(600);
+    setWordProcessorMode(false);
+    setAllowParagraphs(false);
+    resetTest();
+  };
+
+  const handleExitExamMode = () => {
+    setIsExamMode(false);
+    resetTest();
+  };
+
+  // Timer countdown
   useEffect(() => {
-    if (isTesting && !isPaused) {
+    if (isTesting) {
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now();
+      }
       timerRef.current = window.setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev <= 1) {
-            handleCompleteTest();
-            return 0;
+        const now = Date.now();
+        const start = startTimeRef.current || now;
+        const actualElapsedSec = Math.floor((now - start) / 1000);
+        const totalDurationSec = testDuration * 60;
+        const remainingSec = Math.max(0, totalDurationSec - actualElapsedSec);
+
+        setElapsedSeconds(actualElapsedSec);
+        elapsedSecondsRef.current = actualElapsedSec;
+        setTimeRemaining(remainingSec);
+
+        if (remainingSec <= 0) {
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
           }
-          return prev - 1;
-        });
-        setElapsedSeconds((prev) => prev + 1);
-      }, 1000);
+          handleCompleteTestRef.current();
+        }
+      }, 250);
     } else {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     }
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
-  }, [isTesting, isPaused, typedText]);
+  }, [isTesting, testDuration]);
 
   // Auto-scroll target box if autoScroll is enabled
   useEffect(() => {
@@ -204,77 +340,70 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
     }
   }, [currentWordIndex, autoScroll]);
 
-  // Calculate Test Results
+  // Calculate Test Results with RSSB LDC / Rajasthan Exam Criteria
   const handleCompleteTest = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     setIsTesting(false);
 
-    const actualElapsed = Math.max(1, elapsedSeconds);
-    const timeInMinutes = actualElapsed / 60;
+    const currentTyped = typedTextRef.current;
+    const currentElapsed = Math.max(1, elapsedSecondsRef.current);
+    const words = currentTyped.trim().length > 0 ? currentTyped.trim().split(/\s+/).filter(Boolean) : [];
 
-    // Word based metrics
-    let correctWordsCount = 0;
-    let incorrectWordsCount = 0;
-    let correctCharsCount = 0;
-
-    typedWords.forEach((word, idx) => {
-      if (idx < targetWords.length) {
-        if (word === targetWords[idx]) {
-          correctWordsCount++;
-          correctCharsCount += word.length + (idx < typedWords.length - 1 ? 1 : 0);
-        } else {
-          incorrectWordsCount++;
-        }
-      } else {
-        incorrectWordsCount++;
-      }
-    });
-
-    const totalWordsTyped = typedWords.length;
-    const totalCharsTyped = typedText.length;
-    const grossWPM5 = Math.round((totalCharsTyped / 5) / timeInMinutes);
-    const netWPM5 = Math.max(0, Math.round((correctCharsCount / 5) / timeInMinutes));
-    const grossKPM = Math.round(totalCharsTyped / timeInMinutes);
-    const grossKPH = grossKPM * 60;
-    const netKPM = Math.round(correctCharsCount / timeInMinutes);
-    const netKPH = netKPM * 60;
-
-    const grossWPMWords = Math.round(totalWordsTyped / timeInMinutes);
-    const netWPMWords = Math.round(correctWordsCount / timeInMinutes);
-    const accuracy = totalCharsTyped > 0 ? (correctCharsCount / totalCharsTyped) * 100 : 100;
+    const evaluation = alignAndEvaluateWords(targetWords, words, currentElapsed);
 
     const result: TypingResultData = {
       lessonTitle: currentLesson.title,
       lessonId: currentLesson.id,
       language: 'english',
-      totalChars: totalCharsTyped,
-      correctChars: correctCharsCount,
-      errorCount: Math.max(0, totalCharsTyped - correctCharsCount),
-      elapsedSeconds: actualElapsed,
-      accuracy: Math.min(100, Math.max(0, accuracy)),
-      grossWPM5,
-      netWPM5,
-      grossKPM,
-      grossKPH,
-      netKPM,
-      netKPH,
-      spaceWordsTotal: totalWordsTyped,
-      spaceWordsCorrect: correctWordsCount,
-      spaceWordsIncorrect: incorrectWordsCount,
-      grossWPMWords,
-      netWPMWords,
+      totalChars: currentTyped.length,
+      correctChars: evaluation.correctCharsCount,
+      errorCount: evaluation.errorCharsCount,
+      elapsedSeconds: currentElapsed,
+      accuracy: evaluation.accuracy,
+      grossWPM5: evaluation.grossWPM5,
+      netWPM5: evaluation.netWPM5,
+      grossKPM: evaluation.grossKPM,
+      grossKPH: evaluation.grossKPH,
+      netKPM: evaluation.netKPM,
+      netKPH: evaluation.netKPH,
+      spaceWordsTotal: evaluation.totalWordsTyped,
+      spaceWordsCorrect: evaluation.correctWordsCount,
+      spaceWordsIncorrect: evaluation.incorrectWordsCount,
+      grossWPMWords: evaluation.grossWPMWords,
+      netWPMWords: evaluation.netWPMWords,
       backspaceCount,
+      typedParagraph: currentTyped,
+      evaluatedWords: evaluation.evaluatedWords,
     };
 
     setResultData(result);
     setShowResultModal(true);
   };
+  handleCompleteTestRef.current = handleCompleteTest;
 
-  // Keystroke handler for Backspace restrictions & Auto-start
+  // Keystroke handler for Backspace restrictions, cursor locking & Auto-start
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Auto-start timer on first keypress
-    if (!isTesting && !isPaused && e.key.length === 1) {
+    // Auto-start timer on first printable keypress
+    if (!isTesting && e.key.length === 1) {
       setIsTesting(true);
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now();
+      }
+    }
+
+    // Disallow navigating backwards into typed text (standard government exam rule)
+    if (
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowUp' ||
+      e.key === 'Home' ||
+      e.key === 'PageUp'
+    ) {
+      e.preventDefault();
+      ensureCursorAtEnd();
+      return;
     }
 
     // Backspace logic
@@ -283,7 +412,7 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
 
       if (backspaceOption === 'deactivate') {
         e.preventDefault();
-        playBeep(true);
+        playErrorBeep(soundEnabled);
         return;
       }
 
@@ -294,18 +423,17 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
           const charToDelete = typedText[selectionStart - 1];
           if (charToDelete === ' ' || charToDelete === '\n') {
             e.preventDefault();
-            playBeep(true);
+            playErrorBeep(soundEnabled);
             return;
           }
         }
       }
     }
 
-    // Tab key handling
+    // Tab key handling - strictly prohibited in government typing exams
     if (e.key === 'Tab') {
-      if (!allowTabs) {
-        e.preventDefault();
-      }
+      e.preventDefault();
+      return;
     }
 
     // Enter key handling
@@ -318,46 +446,191 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
 
   // Text change handler
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const nextVal = e.target.value;
+    // Strip tabs if pasted or entered (exams do not permit tab indentation)
+    const nextVal = e.target.value.replace(/\t+/g, ' ');
     setTotalKeystrokes((prev) => prev + 1);
 
-    // Apply Keystroke Limit
-    if (applyKeystrokeLimit && nextVal.length >= keystrokeLimit) {
-      setTypedText(nextVal.slice(0, keystrokeLimit));
-      handleCompleteTest();
-      return;
+    // Auto-start timer if not already running
+    if (!isTesting && nextVal.length > 0) {
+      setIsTesting(true);
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now();
+      }
     }
 
-    // Apply Word Limit
-    if (applyWordLimit) {
-      const words = nextVal.trim().split(/\s+/);
+    // Prevent modifying previous characters
+    const prevLen = typedText.length;
+    if (nextVal.length > prevLen) {
+      playKeyClick(soundEnabled);
+    }
+
+    // Word limit check
+    if (applyWordLimit && wordLimit > 0) {
+      const words = nextVal.trim().length > 0 ? nextVal.trim().split(/\s+/).filter(Boolean) : [];
       if (words.length > wordLimit) {
-        handleCompleteTest();
+        const truncatedWords = words.slice(0, wordLimit);
+        const finalVal = truncatedWords.join(' ');
+        setTypedText(finalVal);
+        typedTextRef.current = finalVal;
+        setTimeout(() => {
+          handleCompleteTestRef.current();
+        }, 50);
+        return;
+      } else if (words.length === wordLimit && (nextVal.endsWith(' ') || nextVal.endsWith('\n'))) {
+        const finalVal = nextVal.trimEnd();
+        setTypedText(finalVal);
+        typedTextRef.current = finalVal;
+        setTimeout(() => {
+          handleCompleteTestRef.current();
+        }, 50);
         return;
       }
     }
 
     setTypedText(nextVal);
+    typedTextRef.current = nextVal;
   };
 
-  // Add custom exercise submit
-  const handleAddExerciseSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customContent.trim()) return;
+  // Handle storage file (text or pdf) processing
+  const handleProcessFile = async (file: File) => {
+    setIsParsingFile(true);
+    setParseError(null);
+    setParseProgress('Reading file from storage...');
 
-    const newId = lessons.length + 1;
+    try {
+      const result: ParseResult = await parseExerciseFile(file, (curr, total) => {
+        setParseProgress(`Extracting text from PDF (Page ${curr} of ${total})...`);
+      });
+
+      if (result.errorMessage || !result.text) {
+        setParseError(result.errorMessage || 'Could not extract text from this file.');
+        setIsParsingFile(false);
+        return;
+      }
+
+      // Format file size
+      const sizeStr =
+        file.size < 1024 * 1024
+          ? `${(file.size / 1024).toFixed(1)} KB`
+          : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+      setUploadedFileMeta({
+        name: file.name,
+        size: sizeStr,
+        type: result.fileType === 'pdf' ? 'PDF Document' : 'Text File (.txt)',
+        words: result.wordCount,
+        pages: result.pageCount,
+      });
+
+      // Derive clean title from filename
+      const cleanName = file.name
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[_-]+/g, ' ')
+        .trim();
+
+      const nextId = Math.max(100, ...lessons.map((l) => l.id)) + 1;
+      setCustomTitle(`Exercise : ${nextId}/500 - ${cleanName}`);
+      setCustomCategory(result.fileType === 'pdf' ? 'Storage Import (PDF)' : 'Storage Import (.txt)');
+      setCustomContent(result.text.replace(/\t+/g, ' '));
+      setParseProgress('');
+    } catch (err: unknown) {
+      setParseError(err instanceof Error ? err.message : 'Error reading file.');
+    } finally {
+      setIsParsingFile(false);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setShowAddModal(true);
+      setModalTab('upload');
+      handleProcessFile(file);
+    }
+    // reset input so same file can be re-selected if desired
+    e.target.value = '';
+  };
+
+  // Drag and drop handlers for upload box
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleProcessFile(file);
+    }
+  };
+
+  // Add custom exercise submit (supports both auto-start and save-to-list)
+  const handleSaveExercise = (autoStart = true) => {
+    if (!customContent.trim()) {
+      setParseError('Please provide exercise text or upload a file.');
+      return;
+    }
+
+    const nextId = Math.max(100, ...lessons.map((l) => l.id)) + 1;
     const newLesson: EnglishTestLesson = {
-      id: newId,
-      title: customTitle.trim() || `Exercise : ${newId}/${newId} - Custom Practice`,
+      id: nextId,
+      title: customTitle.trim() || `Exercise : ${nextId}/500 - Custom Practice`,
       category: customCategory.trim() || 'Custom Exercise',
-      content: customContent.trim(),
+      content: customContent.replace(/\t+/g, ' ').trim(),
     };
 
-    setLessons((prev) => [...prev, newLesson]);
-    setSelectedLessonId(newId);
-    setShowAddModal(false);
+    const updatedLessons = [...lessons, newLesson];
+    setLessons(updatedLessons);
+
+    // Save only custom lessons (id > 100) to storage
+    const customOnly = updatedLessons.filter((l) => l.id > 100);
+    saveCustomLessonsToStorage(customOnly);
+
+    if (autoStart) {
+      setSelectedLessonId(nextId);
+      setShowAddModal(false);
+    } else {
+      setParseProgress('Exercise saved to tests list!');
+      setTimeout(() => setParseProgress(''), 2500);
+    }
+
+    // Reset modal form
     setCustomTitle('');
+    setCustomCategory('');
     setCustomContent('');
+    setUploadedFileMeta(null);
+    setParseError(null);
+  };
+
+  // Delete custom exercise
+  const handleDeleteCustomLesson = (lessonId: number) => {
+    if (window.confirm(`Are you sure you want to remove Exercise ${lessonId} from your saved tests?`)) {
+      const updated = lessons.filter((l) => l.id !== lessonId);
+      setLessons(updated);
+      const customOnly = updated.filter((l) => l.id > 100);
+      saveCustomLessonsToStorage(customOnly);
+
+      if (selectedLessonId === lessonId) {
+        setSelectedLessonId(1);
+      }
+    }
+  };
+
+  // Add custom exercise submit form handler
+  const handleAddExerciseSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSaveExercise(true);
   };
 
   // Format Timer Display
@@ -370,175 +643,199 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
   return (
     <div
       id="english-test-screen-root"
-      className={`min-h-screen flex flex-col font-sans select-none ${
-        theme === 'dark' ? 'bg-[#181a20] text-slate-100' : 'bg-[#d6d9df] text-slate-800'
-      }`}
+      className="min-h-screen flex flex-col font-sans select-none bg-[#cbd0d8] text-slate-800"
     >
-      {/* 1. Top Windows Chrome Title Bar */}
-      <TitleBar title="Soni Typing Tutor - RSSB LDC English Typing Test" />
-
-      {/* 2. Top Banner / Header Controls */}
-      <div className="bg-[#dcdfe5] border-b border-slate-300 px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
-        {/* Left Side: Select Font & Bold */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBackToHome}
-            className="flex items-center gap-1 px-2 py-0.5 bg-white hover:bg-slate-100 border border-slate-300 rounded text-slate-700 shadow-2xs font-semibold cursor-pointer transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Home</span>
-          </button>
-
-          <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-slate-700">Select Font:</span>
-            <select
-              value={selectedFont}
-              onChange={(e) => setSelectedFont(e.target.value)}
-              className="bg-white border border-slate-300 rounded px-2 py-0.5 text-xs text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-            >
-              <option value="Segoe UI, Tahoma, sans-serif">Segoe UI</option>
-              <option value="Arial, Helvetica, sans-serif">Arial</option>
-              <option value="Calibri, sans-serif">Calibri</option>
-              <option value="Georgia, serif">Georgia</option>
-              <option value="'Courier New', Courier, monospace">Courier New</option>
-            </select>
-          </div>
-
-          <label className="flex items-center gap-1 cursor-pointer select-none text-slate-700">
-            <input
-              type="checkbox"
-              checked={isBold}
-              onChange={(e) => setIsBold(e.target.checked)}
-              className="rounded text-blue-600 focus:ring-0 cursor-pointer"
-            />
-            <span className="font-semibold">Bold</span>
-          </label>
-        </div>
-
-        {/* Right Side: Quick info banner */}
-        <div className="flex items-center gap-2 text-[11px] text-slate-600">
-          <span className="bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded border border-blue-200">
-            RSSB LDC 2024 Exam Mode
-          </span>
-          <span className="text-slate-500">100 Authentic Exam Passages Available</span>
-        </div>
+      {/* 1. Top Windows Title Bar */}
+      <div className="relative">
+        <TitleBar title="Soni Typing Tutor" />
+        <button
+          onClick={onBackToHome}
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 z-30 flex items-center gap-1 px-1.5 py-0.5 bg-white/20 hover:bg-white/40 text-white rounded text-[11px] font-semibold cursor-pointer transition-colors"
+          title="Back to Soni Typing Tutor Home Menu"
+        >
+          <ArrowLeft className="w-3 h-3" />
+          <span>Home</span>
+        </button>
       </div>
 
-      {/* 3. Main Workspace Grid */}
-      <div className="flex-1 p-2 md:p-3 flex flex-col lg:flex-row gap-3 items-stretch max-w-[1750px] w-full mx-auto overflow-hidden">
-        {/* ================= LEFT / CENTER: MAIN TEST PANEL ================= */}
-        <div className="flex-1 flex flex-col bg-[#8d91dc] border border-[#6b6fb8] rounded-xs shadow-md overflow-hidden p-1.5 gap-1.5">
-          {/* Top Purple Action Ribbon */}
-          <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-1 text-xs">
-            <div className="flex items-center gap-2">
+      {/* Hidden file input for direct storage import of .txt and .pdf files */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".txt,.pdf,text/plain,application/pdf"
+        onChange={handleFileInputChange}
+        className="hidden"
+      />
+
+      {/* 2. Main Workspace Layout */}
+      <div className="flex-1 p-2 md:p-3 flex flex-col lg:flex-row gap-2.5 items-stretch w-full overflow-hidden">
+        {/* ================= LEFT / MAIN: TYPING TEST BOX ================= */}
+        <div
+          className={`flex-1 flex flex-col bg-[#8f93db] border border-[#787cb8] rounded-xs shadow-md overflow-hidden p-1.5 gap-1.5 transition-all ${
+            isExamMode ? 'w-full' : ''
+          }`}
+        >
+          {/* Top Action Ribbon (Screenshot 276 & 275) */}
+          <div className="flex items-center justify-between px-1 py-0.5 text-xs">
+            {/* Left: Go Printout Mode */}
+            <button
+              onClick={() => setShowPrintModal(true)}
+              className="px-3 py-1 bg-[#e8eaf0] hover:bg-white text-[#7f1d1d] border border-[#b91c1c] font-bold text-xs rounded-xs shadow-2xs cursor-pointer transition-colors"
+            >
+              Go Printout Mode
+            </button>
+
+            {/* Center: Add New Exercise & Import from Storage */}
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => setShowPrintModal(true)}
-                className="px-3 py-1 bg-[#dcdfe8] hover:bg-white text-slate-800 border border-slate-400 rounded-xs font-semibold shadow-2xs cursor-pointer flex items-center gap-1 transition-colors"
+                onClick={() => {
+                  fileInputRef.current?.click();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 bg-[#15803d] hover:bg-[#166534] text-white font-bold text-xs rounded-xs shadow-2xs cursor-pointer transition-colors"
+                title="Add new exercise directly from storage text file (.txt) or PDF (.pdf)"
               >
-                <Printer className="w-3.5 h-3.5 text-slate-700" />
-                <span>Go Printout Mode</span>
+                <FileUp className="w-3.5 h-3.5" />
+                <span>Import File (.txt / .pdf)</span>
               </button>
 
               <button
-                onClick={() => setShowAddModal(true)}
-                className="px-3 py-1 bg-[#dcdfe8] hover:bg-white text-slate-800 border border-slate-400 rounded-xs font-semibold shadow-2xs cursor-pointer flex items-center gap-1 transition-colors"
+                onClick={() => {
+                  setModalTab('upload');
+                  setShowAddModal(true);
+                }}
+                className="flex items-center gap-1 text-[#1d4ed8] hover:underline font-semibold text-xs cursor-pointer"
               >
-                <PlusCircle className="w-3.5 h-3.5 text-blue-700" />
+                <PlusCircle className="w-3.5 h-3.5" />
                 <span>Add New Exercise</span>
               </button>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Theme Dropdown */}
-              <div className="flex items-center gap-1 text-slate-900 font-semibold">
-                <span>Theme :</span>
-                <select
-                  value={theme}
-                  onChange={(e) => setTheme(e.target.value as 'light' | 'dark')}
-                  className="bg-white border border-slate-400 rounded-xs px-2 py-0.5 text-xs text-slate-800"
-                >
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </div>
-
-              {/* PDF Icon Button */}
+            {/* Right: Go Exam Mode / Exit Exam Mode */}
+            {!isExamMode ? (
               <button
-                onClick={() => setShowPrintModal(true)}
-                title="Download / Print PDF Exam Sheet"
-                className="p-1 bg-white hover:bg-slate-100 border border-slate-400 rounded-xs text-red-600 shadow-2xs cursor-pointer"
+                onClick={handleEnterExamMode}
+                className="px-3 py-1 bg-[#e8eaf0] hover:bg-white text-[#7f1d1d] border border-[#b91c1c] font-bold text-xs rounded-xs shadow-2xs cursor-pointer transition-colors"
               >
-                <FileText className="w-4 h-4" />
+                Go Exam Mode
               </button>
-
-              {/* Sound Toggle */}
+            ) : (
               <button
-                onClick={() => setSoundEnabled(!soundEnabled)}
-                title={soundEnabled ? 'Mute Key Sound' : 'Enable Key Sound'}
-                className="p-1 bg-white hover:bg-slate-100 border border-slate-400 rounded-xs text-slate-800 shadow-2xs cursor-pointer"
+                onClick={handleExitExamMode}
+                className="px-3 py-1 bg-[#f97316] hover:bg-[#ea580c] text-white font-bold text-xs rounded-xs shadow-xs cursor-pointer transition-colors"
               >
-                {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-slate-400" />}
+                Exit Exam Mode
               </button>
-            </div>
+            )}
           </div>
 
-          {/* TOP BOX: Target Passage Display Area */}
+          {/* TOP BOX: Target Reference Passage Display Area */}
           <div
             ref={targetBoxRef}
-            className={`flex-1 min-h-[170px] max-h-[260px] bg-white border border-slate-400 rounded-xs p-3 overflow-y-auto leading-relaxed shadow-inner ${
+            className={`flex-1 min-h-[220px] max-h-[310px] bg-white border border-slate-600 rounded-xs p-3 leading-relaxed shadow-inner select-text ${
               showScrollbar ? 'overflow-y-scroll' : 'overflow-y-auto'
-            } ${theme === 'dark' ? 'bg-slate-900 text-slate-100 border-slate-700' : 'bg-white text-slate-900'}`}
+            } text-slate-900`}
             style={{
               fontFamily: selectedFont,
               fontWeight: isBold ? 700 : 400,
-              fontSize: `${fontSize * 0.55}px`,
+              fontSize: `${fontSize}px`,
             }}
           >
-            {targetWords.map((word, idx) => {
-              const isCurrent = idx === currentWordIndex;
-              const isTyped = idx < typedWords.length;
-              const isCorrect = isTyped && typedWords[idx] === word;
-              const isWrong = isTyped && !isCorrect;
+            {highlightOption === 'no_highlight' ? (
+              // Plain clean text as in Screenshot 276
+              <div className="whitespace-pre-wrap">{cleanTargetText}</div>
+            ) : highlightOption === 'letter' ? (
+              // Letter Highlight
+              <div>
+                {cleanTargetText.split('').map((char, cIdx) => {
+                  const isCurrent = cIdx === typedText.length;
+                  return (
+                    <span
+                      key={cIdx}
+                      className={
+                        isCurrent
+                          ? 'bg-black text-white font-bold px-0.5 rounded-[1px]'
+                          : ''
+                      }
+                    >
+                      {char}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : (
+              // Word Highlight or Word + Error Highlight
+              targetWords.map((word, idx) => {
+                const isCurrent = idx === currentWordIndex;
+                const isTyped = idx < typedWords.length;
+                const isCorrect = isTyped && typedWords[idx] === word;
+                const isWrong = isTyped && !isCorrect;
 
-              let highlightClass = 'mr-1.5 inline-block';
+                let highlightClass = 'mr-1.5 inline-block';
 
-              if (highlightOption === 'word') {
-                if (isCurrent) {
-                  highlightClass += ' bg-amber-200 text-black px-0.5 rounded-xs font-semibold';
+                if (highlightOption === 'word') {
+                  if (isCurrent) {
+                    highlightClass += ' bg-[#fef08a] text-black px-0.5 rounded-xs font-semibold';
+                  }
+                } else if (highlightOption === 'word_error') {
+                  if (isCurrent) {
+                    highlightClass += ' bg-[#fef08a] text-black px-0.5 rounded-xs font-semibold';
+                  } else if (isWrong) {
+                    highlightClass += ' bg-red-100 text-red-700 px-0.5 rounded-xs underline';
+                  } else if (isCorrect) {
+                    highlightClass += ' text-emerald-800';
+                  }
                 }
-              } else if (highlightOption === 'word_error') {
-                if (isCurrent) {
-                  highlightClass += ' bg-amber-200 text-black px-0.5 rounded-xs font-semibold';
-                } else if (isWrong) {
-                  highlightClass += ' bg-red-100 text-red-700 px-0.5 rounded-xs underline';
-                } else if (isCorrect) {
-                  highlightClass += ' text-emerald-800';
-                }
-              }
 
-              return (
-                <span
-                  key={idx}
-                  ref={isCurrent ? activeWordRef : null}
-                  className={highlightClass}
-                >
-                  {word}
-                </span>
-              );
-            })}
+                return (
+                  <span
+                    key={idx}
+                    ref={isCurrent ? activeWordRef : null}
+                    className={highlightClass}
+                  >
+                    {word}
+                  </span>
+                );
+              })
+            )}
           </div>
 
-          {/* MIDDLE PURPLE CONTROL BAR */}
-          <div className="flex flex-col gap-1 bg-[#8286d5] p-1.5 rounded-xs text-xs text-white">
-            {/* Status notice */}
-            <div className="text-center font-medium text-[11.5px] text-white/95">
-              Select test duration and start typing. Timer will start automatically
+          {/* MIDDLE PURPLE CONTROL BAR (Screenshot 276 & 275) */}
+          <div className="flex flex-col gap-1 bg-[#868ad2] p-1 rounded-xs text-xs text-white">
+            {/* Instruction / Live Timer Notification */}
+            <div className="text-center font-medium text-[11.5px] text-white/95 py-0.5">
+              {isTesting ? (
+                <div className="flex items-center justify-center gap-3">
+                  <span className="bg-amber-300 text-amber-950 font-bold px-2 py-0.5 rounded-xs text-xs font-mono shadow-xs">
+                    Time Left: {formatTime(timeRemaining)}
+                  </span>
+                  <span>
+                    Words: <strong>{typedWords.length}</strong> / {applyWordLimit ? wordLimit : targetWords.length}
+                  </span>
+                  <span>
+                    Backspaces: <strong>{backspaceCount}</strong>
+                  </span>
+                  <button
+                    onClick={() => handleCompleteTest()}
+                    className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xs font-bold text-xs shadow-xs cursor-pointer ml-1"
+                  >
+                    Submit Test
+                  </button>
+                  <button
+                    onClick={() => resetTest()}
+                    className="px-2 py-0.5 bg-white/20 hover:bg-white/30 text-white rounded-xs text-xs cursor-pointer"
+                  >
+                    Restart
+                  </button>
+                </div>
+              ) : (
+                <span>Select test duration and start typing. Timer will start automatically</span>
+              )}
             </div>
 
             {/* Controls Strip */}
-            <div className="flex flex-wrap items-center justify-between gap-2 bg-[#7579cc] p-1 rounded-xs">
-              {/* Duration Selector */}
-              <div className="flex items-center gap-1 text-white font-semibold">
+            <div className="flex items-center justify-between px-1.5 py-0.5 text-xs text-white">
+              {/* Left: Duration Selector */}
+              <div className="flex items-center gap-1.5 font-semibold">
                 <span>Duration :</span>
                 <select
                   value={testDuration}
@@ -547,7 +844,7 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
                     setTestDuration(dur);
                     resetTest(dur);
                   }}
-                  className="bg-white text-slate-800 border border-slate-300 rounded-xs px-1.5 py-0.5 text-xs font-normal"
+                  className="bg-white text-slate-800 border border-slate-300 rounded-xs px-2 py-0.5 text-xs font-normal"
                 >
                   <option value={1}>1 Minute</option>
                   <option value={2}>2 Minutes</option>
@@ -558,7 +855,7 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
                 </select>
               </div>
 
-              {/* Exercise Navigation Dropdown */}
+              {/* Center: Exercise Navigation: << Exercise : 1/500 >> */}
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => {
@@ -567,7 +864,8 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
                     }
                   }}
                   disabled={selectedLessonId <= 1}
-                  className="px-1.5 py-0.5 bg-white text-slate-800 hover:bg-slate-100 disabled:opacity-40 rounded-xs font-bold border border-slate-300 shadow-2xs cursor-pointer"
+                  className="px-2 py-0.5 bg-white text-slate-800 hover:bg-slate-100 disabled:opacity-40 rounded-xs font-bold border border-slate-300 shadow-2xs cursor-pointer"
+                  title="Previous Exercise"
                 >
                   &lt;&lt;
                 </button>
@@ -575,74 +873,70 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
                 <select
                   value={selectedLessonId}
                   onChange={(e) => setSelectedLessonId(parseInt(e.target.value, 10))}
-                  className="bg-white text-slate-800 border border-slate-300 rounded-xs px-2 py-0.5 text-xs max-w-[210px] md:max-w-[270px] truncate"
+                  className="bg-white text-slate-800 border border-slate-300 rounded-xs px-2 py-0.5 text-xs min-w-[190px] max-w-[280px] md:max-w-[340px] truncate"
                 >
-                  {lessons.map((lesson) => (
-                    <option key={lesson.id} value={lesson.id}>
-                      {lesson.title}
-                    </option>
-                  ))}
+                  {/* Custom Storage Exercises first */}
+                  {lessons
+                    .filter((l) => l.id > 100)
+                    .map((l) => (
+                      <option key={`custom-${l.id}`} value={l.id} className="font-semibold text-emerald-800">
+                        ⭐ [Storage] {l.title}
+                      </option>
+                    ))}
+
+                  {/* Standard 500 exercises */}
+                  {Array.from({ length: 500 }, (_, i) => i + 1).map((num) => {
+                    const known = lessons.find((l) => l.id === num);
+                    const label = known
+                      ? known.title
+                      : `Exercise : ${num}/500 - RSSB LDC Mock Test`;
+                    return (
+                      <option key={num} value={num}>
+                        {label}
+                      </option>
+                    );
+                  })}
                 </select>
 
                 <button
                   onClick={() => {
-                    if (selectedLessonId < lessons.length) {
+                    if (selectedLessonId < 500) {
                       setSelectedLessonId(selectedLessonId + 1);
                     }
                   }}
-                  disabled={selectedLessonId >= lessons.length}
-                  className="px-1.5 py-0.5 bg-white text-slate-800 hover:bg-slate-100 disabled:opacity-40 rounded-xs font-bold border border-slate-300 shadow-2xs cursor-pointer"
+                  disabled={selectedLessonId >= 500}
+                  className="px-2 py-0.5 bg-white text-slate-800 hover:bg-slate-100 disabled:opacity-40 rounded-xs font-bold border border-slate-300 shadow-2xs cursor-pointer"
+                  title="Next Exercise"
                 >
                   &gt;&gt;
                 </button>
-              </div>
 
-              {/* Start / Pause / Timer Button */}
-              <div className="flex items-center gap-1">
-                {!isTesting && elapsedSeconds === 0 ? (
+                {/* If selected lesson is a custom imported test, show delete button */}
+                {selectedLessonId > 100 && (
                   <button
-                    onClick={() => {
-                      setIsTesting(true);
-                      inputRef.current?.focus();
-                    }}
-                    className="px-4 py-0.5 bg-[#dcdfe8] hover:bg-white text-slate-900 border border-slate-400 rounded-xs font-bold shadow-2xs cursor-pointer transition-colors"
+                    onClick={() => handleDeleteCustomLesson(selectedLessonId)}
+                    className="p-1 bg-red-100 hover:bg-red-200 text-red-700 rounded-xs border border-red-300 cursor-pointer transition-colors"
+                    title="Delete this custom test from storage"
                   >
-                    Start
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                ) : (
-                  <div className="flex items-center gap-1">
-                    <div className="px-2.5 py-0.5 bg-amber-300 text-amber-950 font-mono font-bold rounded-xs text-xs border border-amber-400 shadow-inner">
-                      {formatTime(timeRemaining)}
-                    </div>
-                    <button
-                      onClick={() => setIsPaused(!isPaused)}
-                      title={isPaused ? 'Resume Test' : 'Pause Test'}
-                      className="px-2 py-0.5 bg-white text-slate-800 border border-slate-400 rounded-xs font-semibold shadow-2xs cursor-pointer"
-                    >
-                      {isPaused ? <Play className="w-3 h-3 text-emerald-600" /> : <Pause className="w-3 h-3 text-amber-600" />}
-                    </button>
-                    <button
-                      onClick={() => handleCompleteTest()}
-                      className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xs font-semibold shadow-2xs cursor-pointer"
-                    >
-                      Submit
-                    </button>
-                  </div>
                 )}
               </div>
 
-              {/* Font Size Adjuster: A- 36 A+ */}
-              <div className="flex items-center gap-0.5 bg-white p-0.5 rounded-xs border border-slate-300 text-slate-800">
+              {/* Right: Font Size Adjuster: A- 18 A+ */}
+              <div className="flex items-center gap-1 bg-white p-0.5 rounded-xs border border-slate-300 text-slate-800">
                 <button
-                  onClick={() => setFontSize((f) => Math.max(18, f - 2))}
+                  onClick={() => setFontSize((f) => Math.max(12, f - 1))}
                   className="px-1.5 py-0.5 hover:bg-slate-200 text-xs font-bold rounded-xs cursor-pointer"
+                  title="Decrease Font Size"
                 >
                   A-
                 </button>
                 <span className="px-1 text-xs font-bold text-blue-900">{fontSize}</span>
                 <button
-                  onClick={() => setFontSize((f) => Math.min(52, f + 2))}
+                  onClick={() => setFontSize((f) => Math.min(32, f + 1))}
                   className="px-1.5 py-0.5 hover:bg-slate-200 text-xs font-bold rounded-xs cursor-pointer"
+                  title="Increase Font Size"
                 >
                   A+
                 </button>
@@ -651,13 +945,18 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
           </div>
 
           {/* BOTTOM BOX: User Typing Input Area */}
-          <div className="flex-1 min-h-[170px] max-h-[260px] bg-white border border-slate-400 rounded-xs shadow-inner flex flex-col relative overflow-hidden">
+          <div className="flex-1 min-h-[220px] max-h-[310px] bg-white border border-slate-600 rounded-xs shadow-inner flex flex-col relative overflow-hidden">
             <textarea
               ref={inputRef}
               value={typedText}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              placeholder="Click here and start typing the above text... Timer will start automatically."
+              onClick={ensureCursorAtEnd}
+              onMouseUp={ensureCursorAtEnd}
+              onSelect={ensureCursorAtEnd}
+              onFocus={ensureCursorAtEnd}
+              onTouchEnd={ensureCursorAtEnd}
+              placeholder=""
               autoFocus
               spellCheck={false}
               autoCapitalize="off"
@@ -665,164 +964,145 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
               autoCorrect="off"
               className={`w-full h-full p-3 resize-none focus:outline-hidden leading-relaxed ${
                 showScrollbar ? 'overflow-y-scroll' : 'overflow-y-auto'
-              } ${theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}`}
+              } text-slate-900`}
               style={{
                 fontFamily: selectedFont,
                 fontWeight: isBold ? 700 : 400,
-                fontSize: `${fontSize * 0.55}px`,
+                fontSize: `${fontSize}px`,
               }}
             />
-
-            {/* Mini floating live stats footer */}
-            <div className="bg-slate-100 border-t border-slate-200 px-3 py-1 flex items-center justify-between text-[11px] text-slate-600 font-medium">
-              <div className="flex items-center gap-3">
-                <span>
-                  Words: <strong className="text-slate-800">{typedWords.length}</strong> / {targetWords.length}
-                </span>
-                <span>
-                  Keystrokes: <strong className="text-slate-800">{typedText.length}</strong>
-                </span>
-                <span>
-                  Backspaces: <strong className="text-slate-800">{backspaceCount}</strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => resetTest()}
-                  className="flex items-center gap-1 text-blue-700 hover:text-blue-900 font-semibold cursor-pointer"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Restart Test</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* ================= RIGHT SIDEBAR: SETTINGS ================= */}
-        <div className="w-full lg:w-[260px] xl:w-[280px] shrink-0 bg-[#e4e7ec] border border-slate-300 rounded-xs p-2 flex flex-col gap-2.5 text-xs text-slate-800">
-          <div className="font-bold text-slate-800 border-b border-slate-300 pb-1 text-[13px]">
-            Settings
-          </div>
-
-          {/* 1. Backspace Options */}
-          <fieldset className="border border-slate-300 rounded-xs p-2 bg-white/70">
-            <legend className="text-[11px] font-bold text-slate-700 px-1">
-              Backspace Options
-            </legend>
-            <div className="flex flex-col gap-1.5 mt-0.5">
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="backspace_opt"
-                  checked={backspaceOption === 'full'}
-                  onChange={() => setBackspaceOption('full')}
-                  className="text-blue-600 cursor-pointer"
-                />
-                <span>Full Backspace</span>
-              </label>
-
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="backspace_opt"
-                  checked={backspaceOption === 'one_word'}
-                  onChange={() => setBackspaceOption('one_word')}
-                  className="text-blue-600 cursor-pointer"
-                />
-                <span>One Word Backspace</span>
-              </label>
-
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="backspace_opt"
-                  checked={backspaceOption === 'deactivate'}
-                  onChange={() => setBackspaceOption('deactivate')}
-                  className="text-blue-600 cursor-pointer"
-                />
-                <span>Deactivate Backspace</span>
-              </label>
+        {/* ================= RIGHT SIDEBAR: SETTINGS (Screenshot 276) ================= */}
+        {!isExamMode && (
+          <div className="w-full lg:w-[260px] xl:w-[270px] shrink-0 bg-[#e4e7ec] border border-slate-300 rounded-xs p-2 flex flex-col gap-2.5 text-xs text-slate-800 select-none">
+            <div className="font-bold text-slate-800 border-b border-slate-300 pb-1 text-[13px]">
+              Settings
             </div>
-          </fieldset>
 
-          {/* 2. Highlight Options */}
-          <fieldset className="border border-slate-300 rounded-xs p-2 bg-white/70">
-            <legend className="text-[11px] font-bold text-slate-700 px-1">
-              Highlight Options
-            </legend>
-            <div className="flex flex-col gap-1.5 mt-0.5">
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="highlight_opt"
-                  checked={highlightOption === 'word'}
-                  onChange={() => setHighlightOption('word')}
-                  className="text-blue-600 cursor-pointer"
-                />
-                <span>Word Highlight</span>
-              </label>
+            {/* 1. Backspace Options */}
+            <fieldset className="border border-slate-300 rounded-xs p-2 bg-white/70">
+              <legend className="text-[11px] font-bold text-slate-700 px-1">
+                Backspace Options
+              </legend>
+              <div className="flex flex-col gap-1.5 mt-0.5">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="backspace_opt"
+                    checked={backspaceOption === 'full'}
+                    onChange={() => setBackspaceOption('full')}
+                    className="text-blue-600 cursor-pointer"
+                  />
+                  <span>Full Backspace</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="backspace_opt"
+                    checked={backspaceOption === 'one_word'}
+                    onChange={() => setBackspaceOption('one_word')}
+                    className="text-blue-600 cursor-pointer"
+                  />
+                  <span>One Word Backspace</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="backspace_opt"
+                    checked={backspaceOption === 'deactivate'}
+                    onChange={() => setBackspaceOption('deactivate')}
+                    className="text-blue-600 cursor-pointer"
+                  />
+                  <span>Deactivate Backspace</span>
+                </label>
+              </div>
+            </fieldset>
 
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="highlight_opt"
-                  checked={highlightOption === 'word_error'}
-                  onChange={() => setHighlightOption('word_error')}
-                  className="text-blue-600 cursor-pointer"
-                />
-                <span>Word + Error Highlight</span>
-              </label>
+            {/* 2. Highlight Options */}
+            <fieldset className="border border-slate-300 rounded-xs p-2 bg-white/70">
+              <legend className="text-[11px] font-bold text-slate-700 px-1">
+                Highlight Options
+              </legend>
+              <div className="flex flex-col gap-1.5 mt-0.5">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="highlight_opt"
+                    checked={highlightOption === 'word'}
+                    onChange={() => setHighlightOption('word')}
+                    className="text-blue-600 cursor-pointer"
+                  />
+                  <span>Word Highlight</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="highlight_opt"
+                    checked={highlightOption === 'word_error'}
+                    onChange={() => setHighlightOption('word_error')}
+                    className="text-blue-600 cursor-pointer"
+                  />
+                  <span>Word + Error Highlight</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="highlight_opt"
+                    checked={highlightOption === 'no_highlight'}
+                    onChange={() => setHighlightOption('no_highlight')}
+                    className="text-blue-600 cursor-pointer"
+                  />
+                  <span>No Highlight</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="highlight_opt"
+                    checked={highlightOption === 'letter'}
+                    onChange={() => setHighlightOption('letter')}
+                    className="text-blue-600 cursor-pointer"
+                  />
+                  <span>Letter Highlight</span>
+                </label>
+              </div>
+            </fieldset>
 
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="highlight_opt"
-                  checked={highlightOption === 'no_highlight'}
-                  onChange={() => setHighlightOption('no_highlight')}
-                  className="text-blue-600 cursor-pointer"
-                />
-                <span>No Highlight</span>
-              </label>
-            </div>
-          </fieldset>
+            {/* 3. Scrollbar Options */}
+            <fieldset className="border border-slate-300 rounded-xs p-2 bg-white/70">
+              <legend className="text-[11px] font-bold text-slate-700 px-1">
+                Scrollbar Options
+              </legend>
+              <div className="flex flex-col gap-1.5 mt-0.5">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showScrollbar}
+                    onChange={(e) => setShowScrollbar(e.target.checked)}
+                    className="rounded text-blue-600 cursor-pointer"
+                  />
+                  <span>Show Scrollbar</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoScroll}
+                    onChange={(e) => setAutoScroll(e.target.checked)}
+                    className="rounded text-blue-600 cursor-pointer"
+                  />
+                  <span>Auto Scroll</span>
+                </label>
+              </div>
+            </fieldset>
 
-          {/* 3. Scrollbar Options */}
-          <fieldset className="border border-slate-300 rounded-xs p-2 bg-white/70">
-            <legend className="text-[11px] font-bold text-slate-700 px-1">
-              Scrollbar Options
-            </legend>
-            <div className="flex flex-col gap-1.5 mt-0.5">
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showScrollbar}
-                  onChange={(e) => setShowScrollbar(e.target.checked)}
-                  className="rounded text-blue-600 cursor-pointer"
-                />
-                <span>Show Scrollbar</span>
-              </label>
-
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={autoScroll}
-                  onChange={(e) => setAutoScroll(e.target.checked)}
-                  className="rounded text-blue-600 cursor-pointer"
-                />
-                <span>Auto Scroll</span>
-              </label>
-            </div>
-          </fieldset>
-
-          {/* 4. Paragraph Settings */}
-          <fieldset className="border border-slate-300 rounded-xs p-2 bg-white/70">
-            <legend className="text-[11px] font-bold text-slate-700 px-1">
-              Paragraph Settings
-            </legend>
-            <div className="flex flex-col gap-2 mt-0.5">
-              <div>
-                <label className="flex items-center gap-1.5 cursor-pointer mb-1">
+            {/* 4. Paragraph Settings */}
+            <fieldset className="border border-slate-300 rounded-xs p-2 bg-white/70">
+              <legend className="text-[11px] font-bold text-slate-700 px-1">
+                Paragraph Settings
+              </legend>
+              <div className="flex flex-col gap-1.5 mt-0.5">
+                <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={applyWordLimit}
@@ -831,141 +1111,132 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
                   />
                   <span>Apply Word Limit</span>
                 </label>
-                <div className="flex items-center gap-1 pl-5">
+                <div className="flex items-center gap-1">
                   <input
                     type="number"
                     min={50}
                     max={1500}
                     value={wordLimit}
-                    onChange={(e) => setWordLimit(parseInt(e.target.value, 10) || 500)}
+                    onChange={(e) => setWordLimit(parseInt(e.target.value, 10) || 600)}
                     disabled={!applyWordLimit}
-                    className="w-20 px-1.5 py-0.5 border border-slate-300 rounded text-xs bg-white disabled:bg-slate-100"
+                    className="w-full px-2 py-0.5 border border-slate-400 rounded-xs text-xs bg-white disabled:bg-slate-100"
                   />
-                  <span className="text-[10px] text-slate-500">(min=50, max=1500)</span>
                 </div>
+                <div className="text-[10px] text-slate-500">(min=50, max=1500)</div>
               </div>
+            </fieldset>
 
-              <div>
-                <label className="flex items-center gap-1.5 cursor-pointer mb-1">
+            {/* 5. Word Processing Mode(NTPC/SSC/Court) */}
+            <fieldset className="border border-slate-300 rounded-xs p-2 bg-white/70">
+              <legend className="text-[11px] font-bold text-slate-700 px-1">
+                Word Processing Mode(NTPC/SSC/Court)
+              </legend>
+              <div className="flex flex-col gap-1.5 mt-0.5">
+                <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={applyKeystrokeLimit}
-                    onChange={(e) => setApplyKeystrokeLimit(e.target.checked)}
+                    checked={wordProcessorMode}
+                    onChange={(e) => setWordProcessorMode(e.target.checked)}
                     className="rounded text-blue-600 cursor-pointer"
                   />
-                  <span>Apply Keystroke Limit</span>
+                  <span>Word Processor Mode (SSC, Court, Steno)</span>
                 </label>
-                <div className="flex items-center gap-1 pl-5">
+                <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
-                    type="number"
-                    min={200}
-                    max={50000}
-                    value={keystrokeLimit}
-                    onChange={(e) => setKeystrokeLimit(parseInt(e.target.value, 10) || 1250)}
-                    disabled={!applyKeystrokeLimit}
-                    className="w-20 px-1.5 py-0.5 border border-slate-300 rounded text-xs bg-white disabled:bg-slate-100"
+                    type="checkbox"
+                    checked={allowParagraphs}
+                    onChange={(e) => setAllowParagraphs(e.target.checked)}
+                    className="rounded text-blue-600 cursor-pointer"
                   />
-                  <span className="text-[10px] text-slate-500">(min 200, max 50000)</span>
-                </div>
+                  <span>Allow Paragraphs</span>
+                </label>
               </div>
-            </div>
-          </fieldset>
-
-          {/* 5. Word Processing Mode */}
-          <fieldset className="border border-slate-300 rounded-xs p-2 bg-white/70">
-            <legend className="text-[11px] font-bold text-slate-700 px-1">
-              Word Processing Mode
-            </legend>
-            <div className="flex flex-col gap-1.5 mt-0.5">
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={wordProcessorMode}
-                  onChange={(e) => setWordProcessorMode(e.target.checked)}
-                  className="rounded text-blue-600 cursor-pointer"
-                />
-                <span>Word Processor Mode (SSC, Court, Steno)</span>
-              </label>
-
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={allowParagraphs}
-                  onChange={(e) => setAllowParagraphs(e.target.checked)}
-                  className="rounded text-blue-600 cursor-pointer"
-                />
-                <span>Allow Paragraphs</span>
-              </label>
-
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={allowTabs}
-                  onChange={(e) => setAllowTabs(e.target.checked)}
-                  className="rounded text-blue-600 cursor-pointer"
-                />
-                <span>Allow Tabs</span>
-              </label>
-
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={allowCorrection}
-                  onChange={(e) => setAllowCorrection(e.target.checked)}
-                  className="rounded text-blue-600 cursor-pointer"
-                />
-                <span>Allow Correction</span>
-              </label>
-            </div>
-          </fieldset>
-        </div>
+            </fieldset>
+          </div>
+        )}
       </div>
 
-      {/* ================= MODAL: PRINTOUT / OFFLINE TEST PAPER ================= */}
+      {/* ================= PRINTOUT MODE MODAL ================= */}
       {showPrintModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white text-slate-900 border border-slate-400 rounded-md shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
-            <div className="bg-slate-100 border-b border-slate-300 px-4 py-2 flex items-center justify-between">
-              <span className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                <Printer className="w-4 h-4 text-blue-600" />
-                <span>Printout Mode - {currentLesson.title}</span>
-              </span>
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden text-slate-900 border border-slate-300">
+            {/* Modal Header */}
+            <div className="bg-[#2b3595] text-white px-4 py-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <Printer className="w-4 h-4" />
+                <span>Soni Typing Tutor - Printout Mode Sheet</span>
+              </div>
               <button
                 onClick={() => setShowPrintModal(false)}
-                className="text-slate-500 hover:text-slate-800 p-1 rounded"
+                className="text-white/80 hover:text-white cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto flex-1 font-serif text-justify leading-loose text-base border-b border-slate-200">
-              <div className="text-center font-sans font-bold text-lg mb-1 text-slate-900">
-                RAJASTHAN STAFF SELECTION BOARD (RSSB) - LDC TYPING TEST
-              </div>
-              <div className="text-center text-xs text-slate-500 mb-6">
-                Category: {currentLesson.category} | Word Count: {targetWords.length} words | Duration: {testDuration} Minutes
+            {/* Printable Content Area */}
+            <div className="p-6 overflow-y-auto flex-1 font-serif text-[15px] leading-relaxed select-text">
+              {/* Exam Header */}
+              <div className="text-center border-b-2 border-slate-800 pb-3 mb-4">
+                <h1 className="text-xl font-bold tracking-wide">SONI TYPING TUTOR</h1>
+                <h2 className="text-sm font-semibold uppercase text-slate-700">
+                  Rajasthan Staff Selection Board (RSSB) LDC Exam Practice Sheet
+                </h2>
+                <div className="flex justify-between text-xs font-sans mt-2 pt-2 border-t border-slate-300">
+                  <span>
+                    <strong>Exercise:</strong> {currentLesson.title}
+                  </span>
+                  <span>
+                    <strong>Word Count:</strong> {targetWords.length} words
+                  </span>
+                  <span>
+                    <strong>Date:</strong> {new Date().toLocaleDateString()}
+                  </span>
+                </div>
               </div>
 
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded text-slate-800 text-[15px] leading-relaxed">
-                {currentLesson.content}
+              {/* Student Details Grid */}
+              <div className="grid grid-cols-2 gap-2 text-xs font-sans border border-slate-300 p-2 mb-4 bg-slate-50">
+                <div>Candidate Name: ___________________________</div>
+                <div>Roll Number: ___________________________</div>
+                <div>Batch / Center: ___________________________</div>
+                <div>Time Allowed: {testDuration} Minutes</div>
+              </div>
+
+              {/* Passage Text */}
+              <div className="p-4 border border-slate-400 bg-white rounded text-justify indent-8 leading-7">
+                {cleanTargetText}
+              </div>
+
+              {/* Signature Section */}
+              <div className="flex justify-between items-end mt-8 pt-4 border-t border-dashed border-slate-400 text-xs font-sans">
+                <div className="text-center">
+                  <div className="w-40 border-b border-slate-600 mb-1"></div>
+                  <span>Candidate Signature</span>
+                </div>
+                <div className="text-center">
+                  <div className="w-40 border-b border-slate-600 mb-1"></div>
+                  <span>Invigilator / Examiner Signature</span>
+                </div>
               </div>
             </div>
 
-            <div className="bg-slate-100 px-4 py-3 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
-                Tip: Press Ctrl+P or click Print to generate paper test copy.
+            {/* Modal Footer Controls */}
+            <div className="bg-slate-100 border-t border-slate-200 px-4 py-2 flex items-center justify-between">
+              <span className="text-xs text-slate-600">
+                Print this sheet for offline paper-to-screen typing practice.
               </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs shadow-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Printer className="w-4 h-4" />
+                  <Printer className="w-3.5 h-3.5" />
                   <span>Print Sheet</span>
                 </button>
                 <button
                   onClick={() => setShowPrintModal(false)}
-                  className="px-4 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded text-xs font-semibold shadow-xs cursor-pointer"
+                  className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded font-semibold text-xs cursor-pointer"
                 >
                   Close
                 </button>
@@ -975,106 +1246,278 @@ export const EnglishTypingTestScreen: React.FC<EnglishTypingTestScreenProps> = (
         </div>
       )}
 
-      {/* ================= MODAL: ADD NEW EXERCISE ================= */}
+      {/* ================= ADD NEW EXERCISE MODAL (STORAGE FILE & MANUAL) ================= */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <form
-            onSubmit={handleAddExerciseSubmit}
-            className="bg-white text-slate-900 border border-slate-400 rounded-md shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col"
-          >
-            <div className="bg-slate-100 border-b border-slate-300 px-4 py-2 flex items-center justify-between">
-              <span className="font-bold text-sm text-slate-800 flex items-center gap-2">
-                <PlusCircle className="w-4 h-4 text-blue-600" />
-                <span>Add New Typing Exercise</span>
-              </span>
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3 md:p-4">
+          <div className="bg-white rounded shadow-2xl max-w-2xl w-full flex flex-col overflow-hidden text-slate-900 border border-slate-300 max-h-[92vh]">
+            {/* Modal Header */}
+            <div className="bg-[#2b3595] text-white px-4 py-2.5 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <FileText className="w-4 h-4 text-amber-300" />
+                <span>Add Exercise to Soni Typing Tutor (From Storage .txt / .pdf)</span>
+              </div>
               <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="text-slate-500 hover:text-slate-800 p-1 rounded"
+                onClick={() => {
+                  setShowAddModal(false);
+                  setParseError(null);
+                }}
+                className="text-white/80 hover:text-white cursor-pointer"
+                title="Close"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-4 flex flex-col gap-3 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Exercise Title:
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Exercise 101 - Rajasthan Administrative Terminology"
-                  value={customTitle}
-                  onChange={(e) => setCustomTitle(e.target.value)}
-                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-hidden"
-                />
+            {/* Modal Navigation Tabs */}
+            <div className="flex border-b border-slate-200 bg-slate-100 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setModalTab('upload')}
+                className={`flex-1 py-2 px-3 flex items-center justify-center gap-1.5 border-b-2 cursor-pointer transition-colors ${
+                  modalTab === 'upload'
+                    ? 'border-blue-600 bg-white text-blue-700 font-bold'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+                <span>Import from Storage (.txt / .pdf)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('manual')}
+                className={`flex-1 py-2 px-3 flex items-center justify-center gap-1.5 border-b-2 cursor-pointer transition-colors ${
+                  modalTab === 'manual'
+                    ? 'border-blue-600 bg-white text-blue-700 font-bold'
+                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5 text-slate-600" />
+                <span>Manual Paste / Typing</span>
+              </button>
+            </div>
+
+            {/* Scrollable Modal Body */}
+            <div className="p-4 overflow-y-auto flex flex-col gap-3 text-xs flex-1">
+              {/* Error Message Banner */}
+              {parseError && (
+                <div className="p-2.5 bg-red-50 border border-red-200 rounded flex items-start gap-2 text-red-700">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-600 mt-0.5" />
+                  <div className="text-xs">
+                    <p className="font-semibold">{parseError}</p>
+                    <p className="text-[11px] text-red-600 mt-0.5">
+                      Ensure your file contains selectable text characters. You can also paste text manually in the "Manual Paste" tab.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Upload Tab: File Drag-and-Drop Area */}
+              {modalTab === 'upload' && (
+                <div>
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={`border-2 border-dashed rounded-lg p-4 text-center flex flex-col items-center justify-center transition-all ${
+                      isDraggingFile
+                        ? 'border-blue-600 bg-blue-50/80 scale-[0.99]'
+                        : uploadedFileMeta
+                        ? 'border-emerald-500 bg-emerald-50/40'
+                        : 'border-slate-300 bg-slate-50 hover:bg-slate-100/70 hover:border-slate-400'
+                    }`}
+                  >
+                    {isParsingFile ? (
+                      <div className="py-4 flex flex-col items-center gap-2 text-blue-700">
+                        <Loader2 className="w-7 h-7 animate-spin text-blue-600" />
+                        <span className="font-semibold text-xs">{parseProgress || 'Processing document...'}</span>
+                      </div>
+                    ) : uploadedFileMeta ? (
+                      <div className="py-1 flex flex-col items-center gap-2 text-slate-800">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                          <span className="font-bold text-xs text-emerald-800">{uploadedFileMeta.name}</span>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-center gap-2 text-[11px]">
+                          <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold">
+                            {uploadedFileMeta.type}
+                          </span>
+                          <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded">
+                            Size: {uploadedFileMeta.size}
+                          </span>
+                          {uploadedFileMeta.pages && (
+                            <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium">
+                              Pages: {uploadedFileMeta.pages}
+                            </span>
+                          )}
+                          <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold">
+                            Words: {uploadedFileMeta.words}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="mt-1 text-[11px] text-blue-600 hover:underline font-semibold cursor-pointer"
+                        >
+                          Upload a different file (.txt / .pdf)
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="py-2 flex flex-col items-center gap-2">
+                        <div className="flex items-center gap-2 text-slate-400">
+                          <div className="p-2 bg-blue-100 text-blue-700 rounded-md font-bold text-[10px]">
+                            TXT
+                          </div>
+                          <div className="p-2 bg-red-100 text-red-700 rounded-md font-bold text-[10px]">
+                            PDF
+                          </div>
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-700 text-xs">
+                            Drag & drop your Text file (.txt) or PDF document (.pdf) here
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Supports official exam passages, legal briefs, notifications, and typing tests
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="mt-1 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded shadow-xs cursor-pointer flex items-center gap-1.5 text-xs transition-colors"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5" />
+                          <span>Browse Device Storage</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Title & Category Input Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Exercise Title:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Exercise : 101/500 - High Court Mock"
+                    value={customTitle}
+                    onChange={(e) => setCustomTitle(e.target.value)}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs focus:outline-hidden focus:ring-1 focus:ring-blue-600 bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Category:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Storage File / Legal Draft"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs focus:outline-hidden focus:ring-1 focus:ring-blue-600 bg-white"
+                  />
+                </div>
               </div>
 
+              {/* Paragraph Content Textarea */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Category:
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. RSSB LDC Custom Practice"
-                  value={customCategory}
-                  onChange={(e) => setCustomCategory(e.target.value)}
-                  className="w-full px-2.5 py-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Exercise Text / Passage to Type:
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-semibold text-slate-700 flex items-center gap-1">
+                    <span>Exercise Content / Paragraph:</span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      (You can review & edit the extracted text below)
+                    </span>
+                  </label>
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                      Words: <strong className="text-blue-700">{customContent.trim().split(/\s+/).filter(Boolean).length}</strong>
+                    </span>
+                    <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded border border-slate-200">
+                      Chars: {customContent.length}
+                    </span>
+                  </div>
+                </div>
                 <textarea
-                  rows={8}
-                  placeholder="Paste or type the English paragraph here..."
+                  rows={7}
+                  placeholder={
+                    modalTab === 'upload'
+                      ? 'Upload a .txt or .pdf file above, and its parsed text will automatically appear here for your review...'
+                      : 'Type or paste your custom typing test paragraph here...'
+                  }
                   value={customContent}
                   onChange={(e) => setCustomContent(e.target.value)}
                   required
-                  className="w-full p-2.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-hidden leading-relaxed font-mono"
+                  className="w-full p-2.5 border border-slate-300 rounded text-xs focus:outline-hidden focus:ring-1 focus:ring-blue-600 resize-none font-mono leading-relaxed bg-white"
                 />
+              </div>
+
+              {/* Word Count Recommendation Alert */}
+              <div className="bg-amber-50 border border-amber-200 rounded p-2 text-[11px] text-amber-800 flex items-center justify-between">
+                <span>
+                  💡 <strong>RSSB LDC Standard:</strong> 10-minute tests typically feature 500–600 words (word limit setting can be enabled in the sidebar).
+                </span>
+                {customContent.trim().split(/\s+/).filter(Boolean).length >= 400 && (
+                  <span className="text-emerald-700 font-bold shrink-0 ml-2">✓ Ideal Exam Length</span>
+                )}
               </div>
             </div>
 
-            <div className="bg-slate-100 border-t border-slate-200 px-4 py-2.5 flex items-center justify-end gap-2">
+            {/* Modal Actions Footer */}
+            <div className="bg-slate-100 border-t border-slate-200 px-4 py-2.5 flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => setShowAddModal(false)}
-                className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 rounded text-xs font-semibold text-slate-700 shadow-2xs cursor-pointer"
+                onClick={() => {
+                  setShowAddModal(false);
+                  setParseError(null);
+                }}
+                className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded font-semibold text-xs cursor-pointer transition-colors"
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold shadow-xs cursor-pointer"
-              >
-                Add & Start Practicing
-              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSaveExercise(false)}
+                  disabled={!customContent.trim()}
+                  className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded font-bold text-xs shadow-2xs cursor-pointer transition-colors disabled:opacity-40"
+                  title="Save this exercise into dropdown list without starting right away"
+                >
+                  Save to Tests List
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSaveExercise(true)}
+                  disabled={!customContent.trim()}
+                  className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs shadow-xs cursor-pointer transition-colors disabled:opacity-40 flex items-center gap-1.5"
+                >
+                  <FileCheck className="w-3.5 h-3.5" />
+                  <span>Save & Start Typing Test</span>
+                </button>
+              </div>
             </div>
-          </form>
+          </div>
         </div>
       )}
 
-      {/* ================= MODAL: TEST SCORECARD RESULT ================= */}
+      {/* ================= OFFICIAL EVALUATION RESULT MODAL ================= */}
       {showResultModal && resultData && (
         <ResultModal
-          isOpen={showResultModal}
           result={resultData}
-          onRestart={() => resetTest()}
-          onRetry={() => resetTest()}
-          onNextLesson={() => {
-            if (selectedLessonId < lessons.length) {
-              setSelectedLessonId(selectedLessonId + 1);
-            } else {
-              setSelectedLessonId(1);
-            }
+          onClose={() => setShowResultModal(false)}
+          onRetry={() => {
+            setShowResultModal(false);
             resetTest();
           }}
-          onClose={() => setShowResultModal(false)}
-          onBackToHome={onBackToHome}
-          hasNextLesson={selectedLessonId < lessons.length}
+          onNextLesson={() => {
+            setShowResultModal(false);
+            if (selectedLessonId < 500) {
+              setSelectedLessonId(selectedLessonId + 1);
+            }
+          }}
         />
       )}
     </div>

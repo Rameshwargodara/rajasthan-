@@ -16,7 +16,11 @@ import {
   HINDI_TYPE_PARAGRAPH_LESSONS,
   HindiLesson,
 } from '../data/hindiLessons';
-import { ENGLISH_LESSONS, EnglishLesson } from '../data/englishLessons';
+import {
+  ENGLISH_LEARN_KEYS_LESSONS,
+  ENGLISH_LESSONS,
+  EnglishLesson,
+} from '../data/englishLessons';
 import {
   AppTheme,
   FontDarkness,
@@ -62,6 +66,7 @@ interface HindiTypingLessonProps {
   onOpenEnglishTestScreen?: () => void;
   initialLanguage?: 'hindi' | 'english';
   initialLayout?: TypingLayout;
+  initialStep?: number;
   theme?: AppTheme;
   onToggleTheme?: () => void;
   fontDarkness?: FontDarkness;
@@ -148,6 +153,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
   onOpenEnglishTestScreen,
   initialLanguage,
   initialLayout,
+  initialStep,
   theme: propTheme,
   onToggleTheme: propOnToggleTheme,
   fontDarkness: propFontDarkness,
@@ -207,7 +213,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
   });
 
   // Active step (1: Instructions, 2: Learn Keys, 3: Practice Words, 4: Paragraphs)
-  const [activeStep, setActiveStep] = useState<number>(() => initialStored.activeStep ?? 2);
+  const [activeStep, setActiveStep] = useState<number>(() => initialStep ?? initialStored.activeStep ?? 2);
 
   // Module identifier for persistence
   const moduleId = useMemo(
@@ -218,6 +224,9 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
   // Active lessons pool based on language and step
   const lessonsList: Array<HindiLesson | EnglishLesson> = useMemo(() => {
     if (language === 'english') {
+      if (activeStep === 2) {
+        return ENGLISH_LEARN_KEYS_LESSONS;
+      }
       return ENGLISH_LESSONS;
     }
     if (activeStep === 3) {
@@ -231,23 +240,23 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
 
   // Module progress record loaded from localStorage
   const [moduleProgress, setModuleProgress] = useState(() =>
-    getStoredModuleProgress(moduleId, 60)
+    getStoredModuleProgress(moduleId, HINDI_LEARN_KEYS_LESSONS.length)
   );
 
   // Keep moduleProgress in sync when moduleId or lesson count changes
   useEffect(() => {
-    const loaded = getStoredModuleProgress(moduleId, lessonsList.length || 60);
+    const loaded = getStoredModuleProgress(moduleId, lessonsList.length || HINDI_LEARN_KEYS_LESSONS.length);
     setModuleProgress(loaded);
   }, [moduleId, lessonsList.length]);
 
-  // Current Selected Exercise (1 to 60) - restored from module's saved lastLessonId
+  // Current Selected Exercise - restored from module's saved lastLessonId
   const [selectedLessonId, setSelectedLessonId] = useState<number>(() => {
     const saved = getStoredModuleProgress(
       buildModuleId(
         initialLayout ?? initialStored.selectedLayout ?? 'krutidev',
         initialStored.activeStep ?? 2
       ),
-      60
+      HINDI_LEARN_KEYS_LESSONS.length
     );
     return saved.lastLessonId || initialStored.selectedLessonId || 1;
   });
@@ -278,7 +287,15 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
     const newLang = newLayout === 'english' ? 'english' : 'hindi';
     setLanguage(newLang);
     const newModuleId = buildModuleId(newLayout, activeStep);
-    const saved = getStoredModuleProgress(newModuleId, lessonsList.length || 60);
+    const stepLessonCount =
+      newLang === 'english'
+        ? (activeStep === 2 ? ENGLISH_LEARN_KEYS_LESSONS.length : ENGLISH_LESSONS.length)
+        : (activeStep === 3
+            ? HINDI_PRACTICE_WORDS_LESSONS.length
+            : activeStep === 4
+            ? HINDI_TYPE_PARAGRAPH_LESSONS.length
+            : HINDI_LEARN_KEYS_LESSONS.length);
+    const saved = getStoredModuleProgress(newModuleId, stepLessonCount);
     const targetLessonId = saved.lastLessonId || 1;
     setSelectedLessonId(targetLessonId);
     setModuleProgress(saved);
@@ -331,7 +348,15 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
   const handleStepChange = (newStep: number) => {
     setActiveStep(newStep);
     const newModuleId = buildModuleId(selectedLayout, newStep);
-    const saved = getStoredModuleProgress(newModuleId, 60);
+    const stepLessonCount =
+      selectedLayout === 'english' || language === 'english'
+        ? (newStep === 2 ? ENGLISH_LEARN_KEYS_LESSONS.length : ENGLISH_LESSONS.length)
+        : (newStep === 3
+            ? HINDI_PRACTICE_WORDS_LESSONS.length
+            : newStep === 4
+            ? HINDI_TYPE_PARAGRAPH_LESSONS.length
+            : HINDI_LEARN_KEYS_LESSONS.length);
+    const saved = getStoredModuleProgress(newModuleId, stepLessonCount);
     const targetLessonId = saved.lastLessonId || 1;
     setSelectedLessonId(targetLessonId);
     setModuleProgress(saved);
@@ -694,7 +719,13 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
 
   // Handle key press
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (showAltModal || isFinished) return;
+    if (showAltModal || isFinished || targetChars.length === 0) return;
+
+    // Tab key is prohibited in exams - prevent losing focus
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      return;
+    }
 
     if (e.key === 'Backspace') {
       e.preventDefault();
@@ -755,6 +786,8 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
   const handleNextLesson = () => {
     if (selectedLessonId < lessonsList.length) {
       handleSelectLesson(selectedLessonId + 1);
+    } else {
+      handleSelectLesson(1);
     }
   };
 
@@ -807,7 +840,13 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
             }`}
           >
             <KeyboardIcon className="w-3.5 h-3.5" />
-            <span>2. Learn Keys (60 Lessons)</span>
+            <span>
+              2. Learn Keys (
+              {language === 'english'
+                ? ENGLISH_LEARN_KEYS_LESSONS.length
+                : HINDI_LEARN_KEYS_LESSONS.length}{' '}
+              Lessons)
+            </span>
           </button>
 
           <span className="text-slate-400 font-mono text-[10px] px-0.5">--&gt;</span>
@@ -1014,10 +1053,14 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
 
             <div className="mt-4 flex justify-center">
               <button
-                onClick={() => setActiveStep(2)}
+                onClick={() => handleStepChange(2)}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-1.5 rounded text-xs shadow-md cursor-pointer transition-colors"
               >
-                Start Typing Exercises (Exercise 1 to 60) &rarr;
+                Start Typing Exercises (Exercise 1 to{' '}
+                {language === 'english'
+                  ? ENGLISH_LEARN_KEYS_LESSONS.length
+                  : HINDI_LEARN_KEYS_LESSONS.length}
+                ) &rarr;
               </button>
             </div>
           </div>
@@ -1137,7 +1180,13 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                   ...darknessStyle.cssStyle,
                 }}
               >
-                {targetChars.map((char, idx) => {
+                {targetChars.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 font-sans text-sm italic select-none py-8">
+                    <p className="font-semibold text-slate-600 dark:text-slate-400">यह अभ्यास (Exercise {selectedLessonId}) अभी रिक्त रखा गया है।</p>
+                    <p className="text-xs text-slate-400 mt-1">This exercise slot is currently empty.</p>
+                  </div>
+                ) : (
+                  targetChars.map((char, idx) => {
                   const isCurrent = idx === currentIndex;
                   const isPassed = idx < currentIndex;
                   const isWrong = isPassed && typedChars[idx] && !typedChars[idx].isCorrect;
@@ -1151,7 +1200,9 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                         ref={isCurrent ? activeSpanRef : null}
                         className={`inline px-0 ${
                           isCurrent
-                            ? 'bg-[#fde047] dark:bg-[#eab308] text-slate-950 font-bold rounded-[1px] shadow-2xs'
+                            ? language === 'english'
+                              ? 'bg-black text-white font-bold rounded-[1px] shadow-2xs'
+                              : 'bg-[#fde047] dark:bg-[#eab308] text-slate-950 font-bold rounded-[1px] shadow-2xs'
                             : isPassed
                             ? 'text-slate-400 dark:text-slate-500'
                             : darknessStyle.className
@@ -1178,7 +1229,9 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                           : 'inline px-0'
                       } ${
                         isCurrent
-                          ? 'bg-[#fde047] dark:bg-[#eab308] text-slate-950 font-bold px-0 py-0 rounded-[1px] shadow-2xs'
+                          ? language === 'english'
+                            ? 'bg-black text-white font-bold px-0 py-0 rounded-[1px] shadow-2xs'
+                            : 'bg-[#fde047] dark:bg-[#eab308] text-slate-950 font-bold px-0 py-0 rounded-[1px] shadow-2xs'
                           : isWrong
                           ? 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/70 font-bold px-0 rounded-[1px]'
                           : isPassed
@@ -1194,7 +1247,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                       {char}
                     </span>
                   );
-                })}
+                }))}
               </div>
 
               {/* 2. Center Controller Strip */}
@@ -1207,9 +1260,9 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                   <div className="flex items-center gap-1 text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 px-2.5 py-0.5 rounded shadow-2xs border border-slate-200 dark:border-slate-700">
                     <span className="text-slate-600 dark:text-slate-400 font-medium">Press :</span>
                     <span className="font-mono text-indigo-600 dark:text-amber-300 font-bold text-sm uppercase">
-                      {expectedKey === ' ' ? 'Space' : expectedKey}
+                      {!expectedKey ? '-' : expectedKey === ' ' ? 'Space' : expectedKey}
                     </span>
-                    {language === 'hindi' && expectedKey !== ' ' && (
+                    {language === 'hindi' && expectedKey && expectedKey !== ' ' && (
                       <span
                         className="text-slate-900 dark:text-slate-100 text-sm ml-1"
                         style={{
@@ -1266,7 +1319,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
                       const isCompleted = moduleProgress.completedLessons.includes(lesson.id);
                       return (
                         <option key={lesson.id} value={lesson.id} className="dark:bg-slate-800">
-                          Exercise {lesson.id} {isCompleted ? '✓' : ''}
+                          Exercise : {lesson.id}/{lessonsList.length} {isCompleted ? '✓' : ''}
                         </option>
                       );
                     })}
@@ -1575,7 +1628,7 @@ export const HindiTypingLesson: React.FC<HindiTypingLessonProps> = ({
           onNextLesson={handleNextLesson}
           onClose={handleRestart}
           onBackToHome={onBackToHome}
-          hasNextLesson={selectedLessonId < lessonsList.length}
+          hasNextLesson={true}
         />
       )}
     </div>

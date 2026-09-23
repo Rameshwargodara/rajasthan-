@@ -22,6 +22,9 @@ export const KrutiKeyboard: React.FC<KrutiKeyboardProps> = ({
   // Determine key background color based on finger / position
   const getKeyColor = (keyObj: any, isActive: boolean) => {
     if (isActive) {
+      if (layoutMode === 'english') {
+        return 'bg-black text-white font-black border-2 border-slate-900 shadow-md z-10 scale-[1.04]';
+      }
       // High-visibility vibrant golden amber with dark crisp text that never covers letters
       return 'bg-[#fbbf24] dark:bg-[#f59e0b] text-slate-950 font-black border-2 border-amber-100 dark:border-amber-300 ring-2 ring-amber-500 ring-offset-1 shadow-md z-10 scale-[1.04]';
     }
